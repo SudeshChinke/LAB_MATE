@@ -87,6 +87,16 @@ const semesterIndex = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8
 const semesterLabelForNumber = number => Object.keys(semesterIndex).find(key => semesterIndex[key] === Number(number)) || String(number);
 
 
+function SparkleMark({ size = 19, className = 'brand-mark' }) {
+  const id = React.useId();
+  return <span className={className}><svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FACC15" /><stop offset="100%" stopColor="#F97316" /></linearGradient></defs>
+    <path d="M12 2l2.09 6.26L20.18 10l-6.09 1.74L12 18l-2.09-6.26L3.82 10l6.09-1.74L12 2z" fill={`url(#${id})`} />
+    <path d="M18 14l1.05 3.15L22 18.2l-2.95.85L18 22.2l-1.05-3.15L14 18.2l2.95-.85L18 14z" fill={`url(#${id})`} opacity=".75" />
+    <path d="M7 14l.7 2.1 2.3.65-2.3.65L7 19.5l-.7-2.1L4 16.75l2.3-.65L7 14z" fill={`url(#${id})`} opacity=".55" />
+  </svg></span>;
+}
+
 function Icon({ name, size = 18 }) {
   const props = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
   const paths = {
@@ -202,7 +212,7 @@ function AuthDialog({ mode, setMode, onClose }) {
   return <div className="dialog-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && onClose()}>
     <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       <button className="dialog-close" onClick={onClose} aria-label="Close account dialog">×</button>
-      <div className="auth-brand"><span className="auth-brand-mark"><Icon name="flask" size={19} /></span><span><b>LabMate</b><small>COLLEGE LAB SPACE</small></span></div>
+      <div className="auth-brand"><SparkleMark size={22} className="auth-brand-mark" /><span><b>LabMate</b><small>COLLEGE LAB SPACE</small></span></div>
       <div className="section-kicker auth-kicker">{mode === 'signup' ? 'GET STARTED' : mode === 'signin' ? 'YOUR ACCOUNT' : 'ACCOUNT HELP'}</div>
       <h2 id="auth-title">{title}</h2>
       <p className="auth-intro">{intro}</p>
@@ -1099,9 +1109,9 @@ function App() {
     if (supabase) await supabase.auth.signOut();
   };
 
-  if (!authInitialized || profileLoading) return <div className="account-state"><div className="account-state-card"><span className="brand-mark"><Icon name="flask" size={19} /></span><p>Loading your LabMate account…</p></div></div>;
+  if (!authInitialized || profileLoading) return <div className="account-state"><div className="account-state-card"><SparkleMark size={22} /><p>Loading your LabMate account…</p></div></div>;
   if (session && (!profile || !['active', 'approved'].includes(profile.account_status))) return <div className="account-state"><div className="account-state-card">
-    <span className="brand-mark"><Icon name="flask" size={19} /></span>
+    <SparkleMark size={22} />
     <div className="section-kicker">LABMATE ACCOUNT</div>
     <h1>{profileError ? 'Account setup problem' : profile?.account_status === 'rejected' ? 'Request not approved' : profile?.role === 'student' ? 'Confirm your email' : 'Waiting for admin approval'}</h1>
     <p>{profileError ? 'We could not load your account details. Please try signing in again.' : profile?.account_status === 'rejected' ? 'Your access request was declined. Please contact your college admin for help.' : profile?.role === 'student' ? 'Confirm your email address, then sign in to open your workspace.' : 'Your email is verified. An admin must approve faculty access before the workspace opens.'}</p>
@@ -1111,7 +1121,7 @@ function App() {
 
   return <div className="app-shell">
     <aside className="sidebar">
-      <a className="brand" href="#dashboard" aria-label="LabMate home"><span className="brand-mark"><Icon name="flask" size={19} /></span><span>labmate<span className="brand-period">.</span></span></a>
+      <a className="brand" href="#dashboard" aria-label="LabMate home"><SparkleMark size={19} /><span>labmate<span className="brand-period">.</span></span></a>
       <div className="workspace-label">YOUR COLLEGE</div>
       <div className="college-select"><span className="college-avatar">E</span><span><b>Electronics &amp; Telecommunication</b><small>SPPU · academic workspace</small></span></div>
       <nav className="nav-list" aria-label="Main navigation">
