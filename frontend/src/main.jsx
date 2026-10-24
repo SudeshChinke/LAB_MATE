@@ -83,6 +83,9 @@ const years = {
   },
 };
 
+const semesterIndex = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8 };
+const semesterLabelForNumber = number => Object.keys(semesterIndex).find(key => semesterIndex[key] === Number(number)) || String(number);
+
 
 function Icon({ name, size = 18 }) {
   const props = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
@@ -99,12 +102,15 @@ function Icon({ name, size = 18 }) {
     plus: <><path d="M12 5v14M5 12h14" /></>,
     check: <path d="m5 12 4 4L19 6" />,
     calendar: <><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M7.5 3v4M16.5 3v4M4 9h16M8 13h2M14 13h2M8 16h2" /></>,
+    chat: <><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-2 2v-9.5A7.5 7.5 0 0 1 10.5 4h2A7.5 7.5 0 0 1 20 11.5Z" /><path d="M8 11h8M8 14h5" /></>,
+    settings: <><circle cx="12" cy="12" r="3" /><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.7a8 8 0 0 1-1.7 1l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.7-1l-1.7.7-1.4-2.4L7.3 15a8 8 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.7.7a8 8 0 0 1 1.7-1l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.7 1l1.7-.7 1.4 2.4-1.4 1.1a8 8 0 0 1-.1 2Z" /></>,
   };
   return <svg {...props}>{paths[name]}</svg>;
 }
 
 function AuthDialog({ mode, setMode, onClose }) {
   const [accountType, setAccountType] = React.useState('student');
+  const [teachingSubjects, setTeachingSubjects] = React.useState([]);
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
   const [busy, setBusy] = React.useState(false);
@@ -144,12 +150,17 @@ function AuthDialog({ mode, setMode, onClose }) {
         if (updateError) throw updateError;
         setMessage('Your password has been updated. You can close this window.');
       } else if (mode === 'signup') {
+        const chosenSubjects = teachingSubjects.map(subjectKey => {
+          const [academic_year, semester, course_code, ...subjectParts] = subjectKey.split('::');
+          return { branch: 'ENTC', academic_year: Number(academic_year), semester: Number(semester), course_code, subject_name: subjectParts.join('::') };
+        });
         const metadata = {
           full_name: String(form.get('full_name') || '').trim(),
           account_type: accountType,
           roll_number: accountType === 'student' ? String(form.get('roll_number') || '').trim() : null,
-          branch: accountType === 'student' ? String(form.get('branch') || '') : null,
+          branch: accountType === 'student' ? String(form.get('branch') || '') : 'ENTC',
           academic_year: accountType === 'student' ? Number(form.get('academic_year')) : null,
+          teaching_subjects: accountType === 'student' ? undefined : chosenSubjects,
         };
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
@@ -199,7 +210,7 @@ function AuthDialog({ mode, setMode, onClose }) {
       <form className="auth-form" onSubmit={handleSubmit}>
         {mode === 'signup' && <>
           <label>Account type
-            <select value={accountType} onChange={event => setAccountType(event.target.value)}>
+          <select value={accountType} onChange={event => { setAccountType(event.target.value); setTeachingSubjects([]); }}>
               <option value="student">Student</option>
               <option value="faculty">Faculty</option>
               <option value="assistant_professor">Assistant professor</option>
@@ -228,10 +239,29 @@ function AuthDialog({ mode, setMode, onClose }) {
           </div>
           <p className="branch-note">Your branch and year set which labs, experiments, and materials you can view.</p>
         </>}
-        {mode === 'signup' && accountType !== 'student' && <div className="setup-notice">Faculty access starts as pending and becomes available after admin approval.</div>}
+        {mode === 'signup' && accountType !== 'student' && <>
+          <p className="branch-note">Select every lab subject you teach. Another teacher may be assigned to the same subject.</p>
+          <div className="teaching-subject-picker" role="group" aria-label="Choose lab subjects">
+            {Object.entries(years).map(([yearLabel, data]) => <fieldset key={yearLabel}>
+              <legend>{yearLabel}</legend>
+              {Object.entries(data.semesters).map(([semesterLabel, semesterCourses]) => <div key={semesterLabel} className="teaching-semester">
+                <b>{semesterLabel}</b>
+                {semesterCourses.map(course => {
+                  const semesterNo = semesterIndex[semesterLabel.split(' ').at(-1)];
+                  const key = `${data.number}::${semesterNo}::${course.code}::${course.subject}`;
+                  return <label key={key} className="teaching-option">
+                    <input type="checkbox" checked={teachingSubjects.includes(key)} onChange={event => setTeachingSubjects(current => event.target.checked ? [...current, key] : current.filter(item => item !== key))} />
+                    <span><b>{course.subject}</b><small>{course.code} · {semesterLabel}{course.elective ? ` · ${course.elective}` : ''}</small></span>
+                  </label>;
+                })}
+              </div>)}
+            </fieldset>)}
+          </div>
+          <div className="setup-notice">Faculty accounts remain pending until an admin approves them. You can update your assignments later in Settings.</div>
+        </>}
         {message && <div className="form-message success" role="status">{message}</div>}
         {error && <div className="form-message error" role="alert">{error}</div>}
-        <button className="auth-submit" type="submit" disabled={busy || !supabaseConfigured}>{busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : mode === 'forgot' ? 'Send reset link' : mode === 'recovery' ? 'Update password' : 'Sign in'}</button>
+        <button className="auth-submit" type="submit" disabled={busy || !supabaseConfigured || (mode === 'signup' && accountType !== 'student' && teachingSubjects.length === 0)}>{busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : mode === 'forgot' ? 'Send reset link' : mode === 'recovery' ? 'Update password' : 'Sign in'}</button>
       </form>
       {mode === 'signin' && <div className="auth-forgot"><button onClick={() => changeMode('forgot')}>Forgot your password?</button></div>}
       {mode === 'recovery'
@@ -308,36 +338,63 @@ function App() {
   const [profile, setProfile] = React.useState(null);
   const [profileLoading, setProfileLoading] = React.useState(Boolean(supabase));
   const [profileError, setProfileError] = React.useState('');
+  const [facultySubjects, setFacultySubjects] = React.useState([]);
+  const [facultySubjectsLoaded, setFacultySubjectsLoaded] = React.useState(false);
+  const [chatSessions, setChatSessions] = React.useState([]);
+  const [activeChatId, setActiveChatId] = React.useState('');
+  const [chatMessages, setChatMessages] = React.useState([]);
+  const [chatPrompt, setChatPrompt] = React.useState('');
+  const [chatFile, setChatFile] = React.useState(null);
+  const [chatBusy, setChatBusy] = React.useState(false);
+  const [chatError, setChatError] = React.useState('');
+  const [chatMessage, setChatMessage] = React.useState('');
+  const [settingLargeText, setSettingLargeText] = React.useState(() => localStorage.getItem('labmate-large-text') === 'true');
+  const [settingReducedMotion, setSettingReducedMotion] = React.useState(() => localStorage.getItem('labmate-reduced-motion') === 'true');
+  const [assignmentDraft, setAssignmentDraft] = React.useState([]);
+  const [settingsMessage, setSettingsMessage] = React.useState('');
+  const [settingsError, setSettingsError] = React.useState('');
   const [authOpen, setAuthOpen] = React.useState(false);
   const [authMode, setAuthMode] = React.useState('signup');
   const [activePage, setActivePage] = React.useState(() => {
     const requestedPage = window.location.hash.slice(1);
-    return requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'timetable', 'progress', 'profile'].includes(requestedPage) ? requestedPage : 'dashboard';
+    return requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'timetable', 'progress', 'profile', 'settings', 'chat'].includes(requestedPage) ? requestedPage : 'dashboard';
   });
   React.useEffect(() => {
     const syncPage = () => {
       const requestedPage = window.location.hash.slice(1);
-      setActivePage(requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'timetable', 'progress', 'profile'].includes(requestedPage) ? requestedPage : 'dashboard');
+      setActivePage(requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'timetable', 'progress', 'profile', 'settings', 'chat'].includes(requestedPage) ? requestedPage : 'dashboard');
       window.scrollTo(0, 0);
     };
     window.addEventListener('hashchange', syncPage);
     return () => window.removeEventListener('hashchange', syncPage);
   }, []);
-  const pageTitle = { dashboard: 'Dashboard', labs: 'Labs', experiments: 'Experiments', materials: 'Materials', timetable: 'Timetable', progress: 'Progress', profile: 'Profile' }[activePage];
+  const pageTitle = { dashboard: 'Dashboard', labs: 'Labs', experiments: 'Experiments', materials: 'Materials', timetable: 'Timetable', progress: 'Attendance', profile: 'Profile', settings: 'Settings', chat: 'Study assistant' }[activePage];
   const uploadInput = React.useRef(null);
   const availableYears = Object.keys(years);
   const visibleYears = profile?.role === 'student'
     ? availableYears.filter(item => years[item].number === profile.academic_year)
-    : availableYears;
+    : ['faculty', 'assistant_professor'].includes(profile?.role) && facultySubjectsLoaded
+      ? availableYears.filter(item => facultySubjects.some(subject => subject.academic_year === years[item].number))
+      : availableYears;
   const yearData = years[year];
-  const semesters = Object.keys(yearData.semesters);
-  const courses = yearData.semesters[semester] || yearData.semesters[semesters[0]];
-  const selectedCourse = courses.find(course => `${course.code}::${course.subject}` === selectedKey) || courses[0];
+  const allSemesters = Object.keys(yearData.semesters);
+  const semesters = ['faculty', 'assistant_professor'].includes(profile?.role) && facultySubjectsLoaded
+    ? allSemesters.filter(item => facultySubjects.some(subject => subject.academic_year === yearData.number && subject.semester === semesterIndex[item.split(' ').at(-1)]))
+    : allSemesters;
+  const allCourses = yearData.semesters[semester] || yearData.semesters[semesters[0]];
+  const courses = ['faculty', 'assistant_professor'].includes(profile?.role) && facultySubjectsLoaded
+    ? allCourses.filter(course => facultySubjects.some(subject => subject.academic_year === yearData.number && subject.semester === semesterIndex[semester.split(' ').at(-1)] && subject.course_code === course.code && subject.subject_name === course.subject))
+    : allCourses;
+  const selectedCourse = courses.find(course => `${course.code}::${course.subject}` === selectedKey) || courses[0] || allCourses[0];
   const selectedExperimentIds = experiments.map(item => item.id).join(',');
-  const semesterNumber = ({ I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8 })[semester.split(/\s+/).at(-1)] || null;
+  const semesterNumber = semesterIndex[semester.split(/\s+/).at(-1)] || null;
   const workspaceRole = profile?.role === 'student' ? 'Student' : profile?.role === 'assistant_professor' ? 'Assistant Professor' : profile?.role === 'admin' ? 'Admin' : profile ? 'Faculty' : '';
-  const canManage = Boolean(profile && ['faculty', 'assistant_professor', 'admin'].includes(profile.role) && ['active', 'approved'].includes(profile.account_status));
-  const canUpload = Boolean(profile && ['active', 'approved'].includes(profile.account_status));
+  const canManage = Boolean(profile && ['active', 'approved'].includes(profile.account_status) && (
+    profile.role === 'admin' || (['faculty', 'assistant_professor'].includes(profile.role) && facultySubjects.some(subject =>
+      subject.academic_year === yearData.number && subject.semester === semesterNumber && subject.branch === (profile.branch || 'ENTC') && subject.course_code === selectedCourse.code && subject.subject_name === selectedCourse.subject
+    ))
+  ));
+  const canUpload = Boolean(canManage && ['faculty', 'assistant_professor', 'admin'].includes(profile.role));
   const now = new Date();
   const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const upcomingSchedule = scheduleEntries.filter(item => item.scheduled_on >= todayKey);
@@ -378,7 +435,7 @@ function App() {
     let mounted = true;
     setProfileLoading(true);
     supabase.from('profiles')
-      .select('id,full_name,email,role,account_status,roll_number,academic_year,branch')
+      .select('id,full_name,email,role,account_status,roll_number,academic_year,branch,created_at')
       .eq('id', session.user.id)
       .single()
       .then(({ data, error }) => {
@@ -400,6 +457,51 @@ function App() {
     const firstCourse = years[assignedYear].semesters[firstSemester][0];
     setSelectedKey(`${firstCourse.code}::${firstCourse.subject}`);
   }, [profile?.id, profile?.role, profile?.academic_year]);
+
+  React.useEffect(() => {
+    if (!supabase || !session || !profile || !['faculty', 'assistant_professor'].includes(profile.role)) {
+      setFacultySubjects([]);
+      setAssignmentDraft([]);
+      setFacultySubjectsLoaded(Boolean(profile?.role !== 'faculty' && profile?.role !== 'assistant_professor'));
+      return undefined;
+    }
+    let mounted = true;
+    setFacultySubjectsLoaded(false);
+    supabase.from('labmate_faculty_subjects')
+      .select('id,branch,academic_year,semester,course_code,subject_name')
+      .eq('faculty_id', profile.id)
+      .then(({ data, error }) => {
+        if (!mounted) return;
+        const rows = data || [];
+        setFacultySubjects(rows);
+        setAssignmentDraft(rows.map(row => `${row.academic_year}::${row.semester}::${row.course_code}::${row.subject_name}`));
+        if (!error && rows.length) {
+          const currentAssigned = rows.some(row => row.academic_year === years[year]?.number && row.semester === semesterIndex[semester.split(' ').at(-1)]);
+          const first = rows[0];
+          if (!currentAssigned) {
+            const firstYear = availableYears.find(item => years[item].number === first.academic_year);
+            if (firstYear) setYear(firstYear);
+            const firstSemester = Object.keys(years[availableYears.find(item => years[item].number === first.academic_year)]?.semesters || {})
+              .find(label => ({ I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8 })[label.split(' ').at(-1)] === first.semester);
+            if (firstSemester) setSemester(firstSemester);
+            setSelectedKey(`${first.course_code}::${first.subject_name}`);
+          }
+        }
+        if (error) setSettingsError(error.message);
+        setFacultySubjectsLoaded(true);
+      });
+    return () => { mounted = false; };
+  }, [session?.user?.id, profile?.id, profile?.role]);
+
+  React.useEffect(() => {
+    document.documentElement.classList.toggle('large-text', settingLargeText);
+    localStorage.setItem('labmate-large-text', String(settingLargeText));
+  }, [settingLargeText]);
+
+  React.useEffect(() => {
+    document.documentElement.classList.toggle('reduced-motion', settingReducedMotion);
+    localStorage.setItem('labmate-reduced-motion', String(settingReducedMotion));
+  }, [settingReducedMotion]);
 
   React.useEffect(() => {
     if (!supabase || !session || !profile) {
@@ -443,7 +545,7 @@ function App() {
   }, [session?.user?.id, profile?.id, profile?.branch, profile?.role, yearData.number]);
 
   React.useEffect(() => {
-    if (!supabase || !session || !profile || activePage !== 'progress' || !selectedExperimentIds) {
+    if (!supabase || !session || !profile || !['progress', 'experiments'].includes(activePage) || !selectedExperimentIds) {
       setPracticalRecords([]);
       return undefined;
     }
@@ -461,7 +563,7 @@ function App() {
   }, [session?.user?.id, profile?.id, activePage, selectedExperimentIds]);
 
   React.useEffect(() => {
-    if (!supabase || !session || !profile || activePage !== 'progress' || !selectedExperimentIds) {
+    if (!supabase || !session || !profile || activePage !== 'experiments' || !selectedExperimentIds) {
       setPracticalEvidence([]);
       return undefined;
     }
@@ -477,6 +579,35 @@ function App() {
       });
     return () => { mounted = false; };
   }, [session?.user?.id, profile?.id, activePage, selectedExperimentIds]);
+
+  React.useEffect(() => {
+    if (!supabase || !session?.user?.id || !profile) {
+      setChatSessions([]);
+      setActiveChatId('');
+      setChatMessages([]);
+      return undefined;
+    }
+    let mounted = true;
+    supabase.from('labmate_chat_sessions').select('id,title,created_at,updated_at')
+      .order('updated_at', { ascending: false }).then(({ data, error }) => {
+        if (!mounted) return;
+        setChatSessions(data || []);
+        if (error) setChatError(error.message);
+      });
+    return () => { mounted = false; };
+  }, [session?.user?.id, profile?.id]);
+
+  React.useEffect(() => {
+    if (!supabase || !activeChatId || activePage !== 'chat') return undefined;
+    let mounted = true;
+    supabase.from('labmate_chat_messages').select('id,role,content,attachment_name,created_at')
+      .eq('session_id', activeChatId).order('created_at', { ascending: true }).then(({ data, error }) => {
+        if (!mounted) return;
+        setChatMessages(data || []);
+        if (error) setChatError(error.message);
+      });
+    return () => { mounted = false; };
+  }, [activeChatId, activePage]);
 
   React.useEffect(() => {
     if (!supabase || !session || !profile || activePage !== 'progress' || !canManage) {
@@ -519,15 +650,29 @@ function App() {
   const chooseYear = nextYear => {
     if (profile?.role === 'student' && years[nextYear].number !== profile.academic_year) return;
     setYear(nextYear);
-    const firstSemester = Object.keys(years[nextYear].semesters)[0];
+    const firstAssignment = ['faculty', 'assistant_professor'].includes(profile?.role)
+      ? facultySubjects.find(subject => subject.academic_year === years[nextYear].number)
+      : null;
+    const firstSemester = firstAssignment
+      ? Object.keys(years[nextYear].semesters).find(item => semesterIndex[item.split(' ').at(-1)] === firstAssignment.semester)
+      : Object.keys(years[nextYear].semesters)[0];
+    if (!firstSemester) return;
     setSemester(firstSemester);
-    const firstCourse = years[nextYear].semesters[firstSemester][0];
-    setSelectedKey(`${firstCourse.code}::${firstCourse.subject}`);
+    const firstCourse = firstAssignment
+      ? years[nextYear].semesters[firstSemester].find(course => course.code === firstAssignment.course_code && course.subject === firstAssignment.subject_name)
+      : years[nextYear].semesters[firstSemester][0];
+    if (firstCourse) setSelectedKey(`${firstCourse.code}::${firstCourse.subject}`);
   };
   const chooseSemester = nextSemester => {
     setSemester(nextSemester);
-    const firstCourse = yearData.semesters[nextSemester][0];
-    setSelectedKey(`${firstCourse.code}::${firstCourse.subject}`);
+    const firstAssignment = ['faculty', 'assistant_professor'].includes(profile?.role)
+      ? facultySubjects.find(subject => subject.academic_year === yearData.number && subject.semester === semesterIndex[nextSemester.split(' ').at(-1)])
+      : null;
+    if (['faculty', 'assistant_professor'].includes(profile?.role) && !firstAssignment) return;
+    const firstCourse = firstAssignment
+      ? yearData.semesters[nextSemester].find(course => course.code === firstAssignment.course_code && course.subject === firstAssignment.subject_name)
+      : yearData.semesters[nextSemester][0];
+    if (firstCourse) setSelectedKey(`${firstCourse.code}::${firstCourse.subject}`);
   };
 
   const addExperiment = async event => {
@@ -583,32 +728,27 @@ function App() {
     setSaving(false);
   };
 
-  const savePracticalCompletion = async experiment => {
+  const savePracticalCompletion = async (experiment, checked) => {
     if (!supabase || !session?.user?.id || !profile || profile.role !== 'student') return;
-    const hasEvidence = practicalEvidence.some(item => item.experiment_id === experiment.id && item.student_id === session.user.id);
-    if (!hasEvidence) {
-      setProgressError('Upload a practical file or output screenshot before marking this complete.');
-      return;
-    }
     setProgressBusy(true);
     setProgressError('');
     setProgressMessage('');
     const existing = practicalRecords.find(item => item.experiment_id === experiment.id && item.student_id === session.user.id);
     const result = existing
       ? await supabase.from('labmate_practical_records')
-        .update({ completion_status: 'completed', updated_at: new Date().toISOString() })
+        .update({ completion_status: checked ? 'completed' : 'not_started', updated_at: new Date().toISOString() })
         .eq('id', existing.id).select('*').single()
       : await supabase.from('labmate_practical_records').insert({
         student_id: session.user.id,
         experiment_id: experiment.id,
-        completion_status: 'completed',
+        completion_status: checked ? 'completed' : 'not_started',
       }).select('*').single();
     if (result.error) setProgressError(result.error.message);
     else {
       setPracticalRecords(current => current.some(item => item.id === result.data.id)
         ? current.map(item => item.id === result.data.id ? result.data : item)
         : [...current, result.data]);
-      setProgressMessage('Practical marked complete.');
+      setProgressMessage(checked ? 'Experiment marked complete.' : 'Experiment marked incomplete.');
     }
     setProgressBusy(false);
   };
@@ -779,6 +919,172 @@ function App() {
     else window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const deleteSharedFile = async file => {
+    if (!supabase || !canManage) return;
+    setSaving(true);
+    setWorkError('');
+    setWorkMessage('');
+    const { error: storageError } = await supabase.storage.from('labmate-materials').remove([file.storage_path]);
+    if (storageError) {
+      setWorkError(storageError.message);
+      setSaving(false);
+      return;
+    }
+    const { error } = await supabase.from('labmate_files').delete().eq('id', file.id);
+    if (error) setWorkError(error.message);
+    else {
+      setSharedFiles(current => current.filter(item => item.id !== file.id));
+      setWorkMessage('Shared file deleted.');
+    }
+    setSaving(false);
+  };
+
+  const saveTeacherAssignments = async () => {
+    if (!supabase || !profile || !['faculty', 'assistant_professor'].includes(profile.role)) return;
+    setSettingsError('');
+    setSettingsMessage('');
+    setSaving(true);
+    const currentKeys = new Set(facultySubjects.map(row => `${row.academic_year}::${row.semester}::${row.course_code}::${row.subject_name}`));
+    const nextKeys = new Set(assignmentDraft);
+    const newRows = assignmentDraft.filter(key => !currentKeys.has(key)).map(key => {
+      const [academic_year, semester, course_code, ...subject] = key.split('::');
+      return { faculty_id: profile.id, branch: 'ENTC', academic_year: Number(academic_year), semester: Number(semester), course_code, subject_name: subject.join('::') };
+    });
+    if (newRows.length) {
+      const { error } = await supabase.from('labmate_faculty_subjects').insert(newRows);
+      if (error) {
+        setSettingsError(error.message);
+        setSaving(false);
+        return;
+      }
+    }
+    const removed = facultySubjects.filter(row => !nextKeys.has(`${row.academic_year}::${row.semester}::${row.course_code}::${row.subject_name}`));
+    if (removed.length) {
+      const { error } = await supabase.from('labmate_faculty_subjects').delete().in('id', removed.map(row => row.id));
+      if (error) {
+        setSettingsError(error.message);
+        setSaving(false);
+        return;
+      }
+    }
+    const { data, error } = await supabase.from('labmate_faculty_subjects').select('id,branch,academic_year,semester,course_code,subject_name').eq('faculty_id', profile.id);
+    if (error) setSettingsError(error.message);
+    else {
+      setFacultySubjects(data || []);
+      setAssignmentDraft((data || []).map(row => `${row.academic_year}::${row.semester}::${row.course_code}::${row.subject_name}`));
+      setSettingsMessage('Your lab assignments are saved.');
+    }
+    setSaving(false);
+  };
+
+  const createChatSession = async () => {
+    if (!supabase || !profile) return null;
+    const { data, error } = await supabase.from('labmate_chat_sessions').insert({ user_id: profile.id, title: 'New chat' }).select('id,title,created_at,updated_at').single();
+    if (error) {
+      setChatError(error.message);
+      return null;
+    }
+    setChatSessions(current => [data, ...current]);
+    setActiveChatId(data.id);
+    setChatMessages([]);
+    return data;
+  };
+
+  const openChatSession = async id => {
+    setChatError('');
+    setActiveChatId(id);
+  };
+
+  const deleteChatSession = async id => {
+    if (!supabase) return;
+    const { error } = await supabase.from('labmate_chat_sessions').delete().eq('id', id);
+    if (error) setChatError(error.message);
+    else {
+      const rest = chatSessions.filter(item => item.id !== id);
+      setChatSessions(rest);
+      if (activeChatId === id) {
+        setActiveChatId(rest[0]?.id || '');
+        setChatMessages([]);
+      }
+    }
+  };
+
+  const sendChatMessage = async event => {
+    event.preventDefault();
+    const text = chatPrompt.trim();
+    if ((!text && !chatFile) || !supabase || !session?.access_token || chatBusy) return;
+    const fileType = chatFile?.type || '';
+    const allowedType = /^(image\/(png|jpeg|webp)|application\/pdf|audio\/(mpeg|mp4|wav|webm|ogg|aac|flac)|video\/(mp4|webm|quicktime|mpeg))$/.test(fileType);
+    if (chatFile && !allowedType) {
+      setChatError('Use a PDF, common image, audio, or video file.');
+      return;
+    }
+    setChatBusy(true);
+    setChatError('');
+    setChatMessage('');
+    let targetId = activeChatId;
+    if (!targetId) {
+      const created = await createChatSession();
+      targetId = created?.id;
+    }
+    if (!targetId) { setChatBusy(false); return; }
+    let attachment = null;
+    if (chatFile) {
+      if (chatFile.size > 2.5 * 1024 * 1024) {
+        setChatError('For multimodal chat, choose a file under 2.5 MB. This keeps requests within the free hosting limit.');
+        setChatBusy(false);
+        return;
+      }
+      attachment = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1]);
+        reader.onerror = () => reject(new Error('Could not read that file.'));
+        reader.readAsDataURL(chatFile);
+      }).catch(error => { setChatError(error.message); return null; });
+      if (!attachment) { setChatBusy(false); return; }
+    }
+    const messageText = text || `Please analyze the attached file: ${chatFile.name}`;
+    const { data: userMessage, error: saveUserError } = await supabase.from('labmate_chat_messages').insert({
+      session_id: targetId, user_id: profile.id, role: 'user', content: messageText, attachment_name: chatFile?.name || null,
+    }).select('id,role,content,attachment_name,created_at').single();
+    if (saveUserError) {
+      setChatError(saveUserError.message);
+      setChatBusy(false);
+      return;
+    }
+    setChatMessages(current => [...current, userMessage]);
+    const title = text.slice(0, 64) || (chatFile?.name || 'Study chat').slice(0, 64);
+    const selectedSession = chatSessions.find(item => item.id === targetId);
+    if (!selectedSession || selectedSession.title === 'New chat') {
+      await supabase.from('labmate_chat_sessions').update({ title, updated_at: new Date().toISOString() }).eq('id', targetId);
+      setChatSessions(current => current.map(item => item.id === targetId ? { ...item, title, updated_at: new Date().toISOString() } : item));
+    }
+    const history = [...chatMessages, userMessage].slice(-12).map(item => ({ role: item.role, parts: [{ text: item.content }] }));
+    if (chatFile) history[history.length - 1].parts.push({ inlineData: { mimeType: fileType, data: attachment } });
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ contents: history }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'The study assistant could not answer right now.');
+      const { data: modelMessage, error: saveModelError } = await supabase.from('labmate_chat_messages').insert({
+        session_id: targetId, user_id: profile.id, role: 'model', content: result.text,
+      }).select('id,role,content,attachment_name,created_at').single();
+      if (saveModelError) throw saveModelError;
+      setChatMessages(current => [...current, modelMessage]);
+      setChatSessions(current => current.map(item => item.id === targetId ? { ...item, updated_at: new Date().toISOString() } : item).sort((a, b) => b.updated_at.localeCompare(a.updated_at)));
+      setChatPrompt('');
+      setChatFile(null);
+      setChatMessage('Reply saved to this chat.');
+    } catch (error) {
+      setChatError(error.message || 'The study assistant could not answer right now.');
+    } finally {
+      setChatBusy(false);
+    }
+  };
+
   const handleSignOut = async () => {
     if (supabase) await supabase.auth.signOut();
   };
@@ -797,15 +1103,17 @@ function App() {
     <aside className="sidebar">
       <a className="brand" href="#dashboard" aria-label="LabMate home"><span className="brand-mark"><Icon name="flask" size={19} /></span><span>labmate<span className="brand-period">.</span></span></a>
       <div className="workspace-label">YOUR COLLEGE</div>
-      <button className="college-select"><span className="college-avatar">E</span><span><b>Electronics &amp; Telecommunication</b><small>SPPU · academic workspace</small></span><Icon name="chevron" size={15} /></button>
+      <div className="college-select"><span className="college-avatar">E</span><span><b>Electronics &amp; Telecommunication</b><small>SPPU · academic workspace</small></span></div>
       <nav className="nav-list" aria-label="Main navigation">
         <a className={activePage === 'dashboard' ? 'nav-item active' : 'nav-item'} href="#dashboard"><Icon name="grid" />Dashboard</a>
         <a className={activePage === 'labs' ? 'nav-item active' : 'nav-item'} href="#labs"><Icon name="flask" />Labs</a>
         <a className={activePage === 'experiments' ? 'nav-item active' : 'nav-item'} href="#experiments"><Icon name="book" />Experiments</a>
         <a className={activePage === 'timetable' ? 'nav-item active' : 'nav-item'} href="#timetable"><Icon name="calendar" />Timetable</a>
-        <a className={activePage === 'progress' ? 'nav-item active' : 'nav-item'} href="#progress"><Icon name="check" />Progress</a>
+        <a className={activePage === 'progress' ? 'nav-item active' : 'nav-item'} href="#progress"><Icon name="check" />Attendance</a>
         <a className={activePage === 'materials' ? 'nav-item active' : 'nav-item'} href="#materials"><Icon name="file" />Materials</a>
+        {profile && <a className={activePage === 'chat' ? 'nav-item active' : 'nav-item'} href="#chat"><Icon name="chat" />Study assistant</a>}
         {profile && <a className={activePage === 'profile' ? 'nav-item active' : 'nav-item'} href="#profile"><Icon name="people" />Profile</a>}
+        {profile && <a className={activePage === 'settings' ? 'nav-item active' : 'nav-item'} href="#settings"><Icon name="settings" />Settings</a>}
       </nav>
       <div className="sidebar-note"><span className="note-mark" />Only syllabus lab and practical courses appear here.</div>
       <div className="sidebar-bottom"><span className="year-label">ACADEMIC YEARS</span><div className="year-list">{visibleYears.map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'year-link current' : 'year-link'}>{item}<span>{Object.keys(years[item].semesters).length}</span></button>)}</div><div className="profile"><div className="profile-avatar">{workspaceRole === 'Faculty' ? 'FC' : workspaceRole === 'Admin' ? 'AD' : profile ? 'ST' : '—'}</div><span><b>{profile?.full_name || 'Not signed in'}</b><small>{profile ? workspaceRole : 'Sign in for files and schedules'}</small></span></div></div>
@@ -815,7 +1123,6 @@ function App() {
       <header className="topbar">
         <div className="breadcrumbs">LabMate <span>/</span> {pageTitle}</div>
         <div className="topbar-actions">
-          <a className="home-button" href="#dashboard"><Icon name="grid" size={15} />Home</a>
           {profile ? <><span className="signed-in-name">{profile.full_name}<small>{workspaceRole}</small></span><button className="quiet-button" onClick={handleSignOut}>Sign out</button></> : <><button className="quiet-button" onClick={() => { setAuthMode('signin'); setAuthOpen(true); }}>Sign in</button><button className="auth-top-button" onClick={() => { setAuthMode('signup'); setAuthOpen(true); }}>Create account</button></>}
         </div>
       </header>
@@ -846,9 +1153,11 @@ function App() {
             <a className="dashboard-link" href="#labs"><span className="dashboard-link-icon"><Icon name="flask" size={18} /></span><span><b>Labs</b><small>Browse courses and choose a lab</small></span><Icon name="arrow" size={16} /></a>
             <a className="dashboard-link" href="#experiments"><span className="dashboard-link-icon"><Icon name="book" size={18} /></span><span><b>Experiments</b><small>View schedules and experiment details</small></span><Icon name="arrow" size={16} /></a>
             <a className="dashboard-link" href="#timetable"><span className="dashboard-link-icon"><Icon name="calendar" size={18} /></span><span><b>Timetable</b><small>Upcoming practical dates and reminders</small></span><Icon name="arrow" size={16} /></a>
-            {profile && <a className="dashboard-link" href="#progress"><span className="dashboard-link-icon"><Icon name="check" size={18} /></span><span><b>Attendance &amp; progress</b><small>Track attendance and practical completion</small></span><Icon name="arrow" size={16} /></a>}
-            <a className="dashboard-link" href="#materials"><span className="dashboard-link-icon"><Icon name="file" size={18} /></span><span><b>Materials</b><small>Upload and open shared files</small></span><Icon name="arrow" size={16} /></a>
+            {profile && <a className="dashboard-link" href="#progress"><span className="dashboard-link-icon"><Icon name="check" size={18} /></span><span><b>Attendance</b><small>View or record in-person lab attendance</small></span><Icon name="arrow" size={16} /></a>}
+            <a className="dashboard-link" href="#materials"><span className="dashboard-link-icon"><Icon name="file" size={18} /></span><span><b>Materials</b><small>Open files shared by lab teachers</small></span><Icon name="arrow" size={16} /></a>
+            {profile && <a className="dashboard-link" href="#chat"><span className="dashboard-link-icon"><Icon name="chat" size={18} /></span><span><b>Study assistant</b><small>Ask questions about lab work and study files</small></span><Icon name="arrow" size={16} /></a>}
             {profile && <a className="dashboard-link" href="#profile"><span className="dashboard-link-icon"><Icon name="people" size={18} /></span><span><b>Profile</b><small>View your account details</small></span><Icon name="arrow" size={16} /></a>}
+            {profile && <a className="dashboard-link" href="#settings"><span className="dashboard-link-icon"><Icon name="settings" size={18} /></span><span><b>Settings</b><small>Personal preferences and lab assignments</small></span><Icon name="arrow" size={16} /></a>}
           </div>
         </section>
         {profile?.role === 'admin' && <ApprovalPanel client={supabase} />}
@@ -864,22 +1173,22 @@ function App() {
         {yearData.note && <p className="curriculum-note">{yearData.note}</p>}
         <section className="subject-panel labs-panel" aria-label="Lab course list">
           <div className="panel-topline"><span>LAB COURSE · SUBJECT</span><span>CODE</span></div>
-          <div className="subject-list">{courses.map(course => {
+        <div className="subject-list">{courses.map(course => {
             const key = course.code + '::' + course.subject;
-            return <button key={key} onClick={() => setSelectedKey(key)} className={selectedCourse.code === course.code && selectedCourse.subject === course.subject ? 'subject-row selected' : 'subject-row'}>
-              <span className="subject-name"><b>{course.lab}</b><small>{course.elective ? course.elective + ' (' + course.subject + ')' : course.subject}</small></span><span className="subject-code">{course.code}</span><Icon name="arrow" size={15} />
+            return <button key={key} onClick={() => { setSelectedKey(key); window.location.hash = 'experiments'; }} className={selectedCourse.code === course.code && selectedCourse.subject === course.subject ? 'subject-row selected' : 'subject-row'} aria-label={`Open ${course.subject} experiments`}>
+              <span className="subject-name"><b>{course.subject}{course.elective ? ` (${course.elective})` : ''}</b></span><span className="subject-code">{course.code}</span><Icon name="arrow" size={15} />
             </button>;
           })}</div>
           <div className="subject-footer"><span className="check-icon"><Icon name="check" size={14} /></span>{courses.length} lab sections in this semester</div>
         </section>
-        <div className="labs-next-actions"><span>Selected lab: <b>{selectedCourse.lab}</b></span><a className="quiet-button" href="#experiments">View experiments</a><a className="quiet-button" href="#materials">View materials</a></div>
+        <div className="labs-next-actions"><span>Selected subject: <b>{selectedCourse.subject}{selectedCourse.elective ? ` (${selectedCourse.elective})` : ''}</b></span><a className="quiet-button" href="#materials">View materials</a></div>
       </>}
 
       {activePage === 'experiments' && <>
         <section className="page-heading">
           <div><div className="eyebrow">LABMATE <span>·</span> COURSE WORK</div><h1>Experiments<span className="heading-period">.</span></h1><p>Review experiment details and dates for the selected lab.</p></div>
         </section>
-        <div className="course-context"><div><span className="section-kicker">SELECTED LAB</span><b>{selectedCourse.lab}</b><small>{selectedCourse.code} · {selectedCourse.subject} · {year} · {semester}</small></div><a className="quiet-button" href="#labs">Change lab</a></div>
+        <div className="course-context"><div><span className="section-kicker">SELECTED SUBJECT</span><b>{selectedCourse.subject}{selectedCourse.elective ? ` (${selectedCourse.elective})` : ''}</b><small>{selectedCourse.code} · {year} · {semester}</small></div><a className="quiet-button" href="#labs">Change lab</a></div>
         <section className="detail-panel page-detail-panel">
           <section className="experiment-section">
             <div className="material-heading"><div><div className="section-kicker">SCHEDULE</div><h2>Experiments &amp; schedule</h2></div><a className="syllabus-link" href={yearData.source} target="_blank" rel="noreferrer">Syllabus ↗</a></div>
@@ -893,7 +1202,13 @@ function App() {
                 <label>Scheduled date<input type="date" value={editingExperiment.scheduled_on || ''} onChange={event => setEditingExperiment(current => ({ ...current, scheduled_on: event.target.value }))} /></label>
                 <label>Notes<textarea value={editingExperiment.notes || ''} onChange={event => setEditingExperiment(current => ({ ...current, notes: event.target.value }))} rows="2" /></label>
                 <div className="form-actions"><button className="upload-button" disabled={saving}>Save changes</button><button type="button" className="quiet-button" onClick={() => setEditingExperiment(null)}>Cancel</button></div>
-              </form> : <div className="experiment-item"><div><b>Experiment {experiment.experiment_number} · {experiment.title}</b><small>{experiment.scheduled_on ? 'Scheduled ' + new Date(experiment.scheduled_on + 'T12:00:00').toLocaleDateString() : 'Date not set'}{experiment.notes ? ' · ' + experiment.notes : ''}</small></div>{canManage && <button className="quiet-button" onClick={() => setEditingExperiment({ id: experiment.id, title: experiment.title, scheduled_on: experiment.scheduled_on || '', notes: experiment.notes || '' })}>Edit</button>}</div>}
+              </form> : <div className="experiment-item"><div><b>Experiment {experiment.experiment_number} · {experiment.title}</b><small>{experiment.scheduled_on ? 'Scheduled ' + new Date(experiment.scheduled_on + 'T12:00:00').toLocaleDateString() : 'Date not set'}{experiment.notes ? ' · ' + experiment.notes : ''}</small></div>{profile?.role === 'student' && <label className="experiment-check"><input type="checkbox" checked={practicalRecords.some(item => item.experiment_id === experiment.id && item.student_id === session?.user?.id && item.completion_status === 'completed')} onChange={event => savePracticalCompletion(experiment, event.target.checked)} disabled={progressBusy} /><span>Completed</span></label>}{canManage && <button className="quiet-button" onClick={() => setEditingExperiment({ id: experiment.id, title: experiment.title, scheduled_on: experiment.scheduled_on || '', notes: experiment.notes || '' })}>Edit</button>}</div>}
+              {profile?.role === 'student' && <div className="experiment-evidence">
+                <p>Attach your practical file or output screenshot for this experiment.</p>
+                <input className="evidence-input" type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.zip,.png,.jpg,.jpeg" aria-label={`Upload practical evidence for ${experiment.title}`} onChange={event => uploadPracticalEvidence(experiment, event)} disabled={evidenceBusy === experiment.id} />
+                {evidenceBusy === experiment.id && <small className="evidence-hint">Uploading…</small>}
+                {practicalEvidence.filter(item => item.experiment_id === experiment.id && item.student_id === session?.user?.id).map(file => <span className="experiment-file" key={file.id}>{file.original_name} <button className="file-access" onClick={() => openPracticalEvidence(file)}>Open ↗</button></span>)}
+              </div>}
             </li>)}</ol>}
             {profile && canManage && <form className="experiment-form add-experiment-form" onSubmit={addExperiment}>
               <h3>Add an experiment</h3>
@@ -929,44 +1244,29 @@ function App() {
 
       {activePage === 'progress' && <>
         <section className="page-heading">
-          <div><div className="eyebrow">LABMATE <span>·</span> SUBJECT TRACKING</div><h1>Attendance &amp; progress<span className="heading-period">.</span></h1><p>{canManage ? 'Take in-person attendance and view practical evidence.' : 'View your attendance, upload practical evidence, and mark work complete.'}</p></div>
+          <div><div className="eyebrow">LABMATE <span>·</span> SUBJECT TRACKING</div><h1>Attendance<span className="heading-period">.</span></h1><p>{canManage ? 'Record attendance in the lab using each student’s name and roll number.' : 'View attendance recorded by your faculty for each practical.'}</p></div>
         </section>
-        <div className="course-context"><div><span className="section-kicker">SELECT SUBJECT</span><select className="progress-subject-select" aria-label="Choose subject for progress" value={selectedKey} onChange={event => setSelectedKey(event.target.value)}>{courses.map(course => <option key={`${course.code}::${course.subject}`} value={`${course.code}::${course.subject}`}>{course.elective ? `${course.elective} (${course.subject})` : course.subject}</option>)}</select><small>{selectedCourse.lab} · {year} · {semester}</small></div><a className="quiet-button" href="#labs">Browse labs</a></div>
+        <div className="course-context"><div><span className="section-kicker">SELECT SUBJECT</span><select className="progress-subject-select" aria-label="Choose subject for attendance" value={selectedKey} onChange={event => setSelectedKey(event.target.value)}>{courses.map(course => <option key={`${course.code}::${course.subject}`} value={`${course.code}::${course.subject}`}>{course.subject}{course.elective ? ` (${course.elective})` : ''}</option>)}</select><small>{year} · {semester}</small></div><a className="quiet-button" href="#labs">Browse labs</a></div>
         {profile && progressError && <p className="form-message error" role="alert">{progressError}</p>}
         {profile && progressMessage && <p className="form-message success" role="status">{progressMessage}</p>}
         {!profile && <p className="empty-list">Sign in to view subject attendance and practical progress.</p>}
         {profile && experiments.length === 0 && <p className="empty-list">No experiments are listed for this subject yet.</p>}
-        {profile && experiments.length > 0 && <section className="progress-list" aria-label="Practical progress for selected subject">
-          <div className="progress-explainer">{canManage ? 'Take roll call in the practical room: match each student’s name and roll number to the person present (ask for college ID if needed). Only faculty can save attendance; students cannot mark themselves present.' : 'Upload your practical file or output screenshot, then mark it complete. Attendance is recorded by faculty during the practical; students cannot change it.'}</div>
+        {profile && experiments.length > 0 && <section className="progress-list" aria-label="Attendance for selected subject">
+          <div className="progress-explainer">Attendance is recorded by approved faculty in person. Match the student’s name and college roll number and, when available, check their college ID before marking present. Students cannot edit attendance.</div>
           {experiments.map(experiment => {
             const ownRecord = practicalRecords.find(item => item.experiment_id === experiment.id && item.student_id === session?.user?.id);
-            const ownEvidence = practicalEvidence.filter(item => item.experiment_id === experiment.id && item.student_id === session?.user?.id);
             const attendanceName = { not_marked: 'Not marked', present: 'Present', absent: 'Absent', late: 'Late' };
-            const completionName = { not_started: 'Not started', completed: 'Completed' };
             return <article className="progress-experiment" key={experiment.id}>
-              <div className="progress-experiment-heading"><div><span className="section-kicker">EXPERIMENT {experiment.experiment_number}{experiment.scheduled_on ? ` · ${new Date(`${experiment.scheduled_on}T12:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}</span><h2>{experiment.title}</h2></div></div>
-              {!canManage && <div className="student-progress-row">
-                <div className="progress-statuses"><span>Attendance <b>{attendanceName[ownRecord?.attendance_status || 'not_marked']}</b></span><span>Practical <b>{completionName[ownRecord?.completion_status || 'not_started']}</b></span></div>
-                {ownRecord?.completion_status === 'completed' ? <span className="progress-tag complete"><Icon name="check" size={14} /> Completed</span> : <button className="upload-button" onClick={() => savePracticalCompletion(experiment)} disabled={progressBusy || ownEvidence.length === 0}>{progressBusy ? 'Saving…' : ownEvidence.length ? 'Mark complete' : 'Upload evidence first'}</button>}
-              </div>}
-              {!canManage && <div className="evidence-panel">
-                <p>Add your practical file and output screenshots. These uploads are private to you and faculty.</p>
-                <input className="evidence-input" type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.zip,.png,.jpg,.jpeg" aria-label={`Upload evidence for ${experiment.title}`} onChange={event => uploadPracticalEvidence(experiment, event)} disabled={evidenceBusy === experiment.id || ownRecord?.completion_status === 'completed'} />
-                {evidenceBusy === experiment.id && <small className="evidence-hint">Uploading…</small>}
-                {ownEvidence.length > 0 && <ul className="evidence-list">{ownEvidence.map(file => <li key={file.id}><span>{file.original_name}</span><button className="file-access" onClick={() => openPracticalEvidence(file)}>Open ↗</button></li>)}</ul>}
-                {ownEvidence.length === 0 && <small className="evidence-hint">No evidence uploaded yet · Max 50 MB per file</small>}
-              </div>}
+              <div className="progress-experiment-heading"><div><span className="section-kicker">EXPERIMENT {experiment.experiment_number}{experiment.scheduled_on ? ` · ${new Date(`${experiment.scheduled_on}T12:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}</span><h2>{experiment.title}</h2></div>{!canManage && <span className="attendance-status">{attendanceName[ownRecord?.attendance_status || 'not_marked']}</span>}</div>
               {canManage && <div className="roster-list">
                 {studentRoster.length === 0 && <p className="empty-list">No active students are registered in this year yet.</p>}
                 {studentRoster.map(student => {
                   const record = practicalRecords.find(item => item.experiment_id === experiment.id && item.student_id === student.id);
-                  const studentEvidence = practicalEvidence.filter(item => item.experiment_id === experiment.id && item.student_id === student.id);
                   return <div className="roster-row" key={student.id}>
-                    <div className="roster-person"><b>{student.full_name}</b><small>Roll no. {student.roll_number} · Practical {completionName[record?.completion_status || 'not_started']}</small></div>
+                    <div className="roster-person"><b>{student.full_name}</b><small>College roll no. {student.roll_number}</small></div>
                     <select aria-label={`Attendance for ${student.full_name}, roll number ${student.roll_number}`} value={record?.attendance_status || 'not_marked'} onChange={event => saveAttendance(student, experiment, event.target.value)} disabled={progressBusy}>
                       <option value="not_marked">Mark attendance</option><option value="present">Present</option><option value="absent">Absent</option><option value="late">Late</option>
                     </select>
-                    <div className="roster-evidence"><span>Evidence</span>{studentEvidence.length ? studentEvidence.map(file => <button key={file.id} className="file-access" onClick={() => openPracticalEvidence(file)}>{file.original_name} ↗</button>) : <small>No uploads</small>}</div>
                   </div>;
                 })}
               </div>}
@@ -977,18 +1277,18 @@ function App() {
 
       {activePage === 'materials' && <>
         <section className="page-heading">
-          <div><div className="eyebrow">LABMATE <span>·</span> COURSE WORK</div><h1>Materials<span className="heading-period">.</span></h1><p>Share practical sheets, notes, and syllabus material.</p></div>
+          <div><div className="eyebrow">LABMATE <span>·</span> COURSE WORK</div><h1>Materials<span className="heading-period">.</span></h1><p>Open files shared by faculty for your lab subjects.</p></div>
         </section>
-        <div className="course-context"><div><span className="section-kicker">SELECTED LAB</span><b>{selectedCourse.lab}</b><small>{selectedCourse.code} · {selectedCourse.subject} · {year} · {semester}</small></div><a className="quiet-button" href="#labs">Change lab</a></div>
+        <div className="course-context"><div><span className="section-kicker">SUBJECT</span><select className="progress-subject-select" aria-label="Choose subject materials" value={selectedKey} onChange={event => setSelectedKey(event.target.value)}>{courses.map(course => <option key={`${course.code}::${course.subject}`} value={`${course.code}::${course.subject}`}>{course.subject}{course.elective ? ` (${course.elective})` : ''}</option>)}</select><small>{year} · {semester}</small></div><a className="quiet-button" href="#labs">Choose semester</a></div>
         <section className="detail-panel page-detail-panel">
           <section className="materials-section page-materials-section" aria-label="Shared course files">
             <div className="material-heading"><div><div className="section-kicker">COURSE LIBRARY</div><h2>Shared course files</h2></div>{canUpload && <button className="upload-button" onClick={() => uploadInput.current?.click()} disabled={saving}><Icon name="upload" size={15} />Upload file</button>}</div>
             <input ref={uploadInput} className="file-input" type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.zip,.png,.jpg,.jpeg" onChange={handleUpload} aria-label="Upload course material" />
-            <p className="upload-hint">{canUpload ? 'Students and faculty can share practical sheets, notes, and syllabus material (up to 50 MB).' : 'Shared files are available after you sign in with an approved account.'}</p>
+            <p className="upload-hint">{canUpload ? 'Teachers assigned to this subject can share course files (up to 50 MB).' : 'Only files shared by approved teachers appear here.'}</p>
             {profile && workError && <p className="form-message error" role="alert">{workError}</p>}
             {profile && workMessage && <p className="form-message success" role="status">{workMessage}</p>}
             {profile && sharedFiles.length === 0 && <p className="empty-list">No files have been shared for this lab yet.</p>}
-            {profile && sharedFiles.length > 0 && <ul className="material-list">{sharedFiles.map(file => <li key={file.id}><span className="file-glyph"><Icon name="file" size={15} /></span><span className="file-name">{file.original_name}<small>{(file.file_size / (1024 * 1024)).toFixed(2)} MB · {new Date(file.created_at).toLocaleDateString()}</small></span><button className="file-access" onClick={() => openSharedFile(file)}>Open ↗</button></li>)}</ul>}
+            {profile && sharedFiles.length > 0 && <ul className="material-list">{sharedFiles.map(file => <li key={file.id}><span className="file-glyph"><Icon name="file" size={15} /></span><span className="file-name">{file.original_name}<small>{(file.file_size / (1024 * 1024)).toFixed(2)} MB · {new Date(file.created_at).toLocaleDateString()}</small></span><button className="file-access" onClick={() => openSharedFile(file)}>Open ↗</button>{canManage && <button className="file-delete" onClick={() => deleteSharedFile(file)} disabled={saving}>Delete</button>}</li>)}</ul>}
           </section>
         </section>
       </>}
@@ -1010,9 +1310,80 @@ function App() {
                 <div><dt>College roll number</dt><dd>{profile.roll_number}</dd></div>
                 <div><dt>Academic year</dt><dd>{profile.academic_year}{profile.academic_year === 2 ? 'nd' : profile.academic_year === 3 ? 'rd' : 'th'} year</dd></div>
               </>}
+              {['faculty', 'assistant_professor'].includes(profile.role) && <>
+                <div><dt>Branch</dt><dd>Electronics &amp; Telecommunication (E&amp;TC)</dd></div>
+                <div><dt>Teaching subjects</dt><dd>{facultySubjects.length ? facultySubjects.map(item => `${item.subject_name}${item.elective_name ? ` (${item.elective_name})` : ''} · Year ${item.academic_year} · Semester ${semesterLabelForNumber(item.semester)}`).join('; ') : 'No lab subjects assigned yet'}</dd></div>
+              </>}
+              <div><dt>Member since</dt><dd>{profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'long' }) : '—'}</dd></div>
+              <div><dt>Workspace</dt><dd>SPPU E&amp;TC · LabMate</dd></div>
             </dl>
           </div>
         </> : <section className="page-heading"><div><div className="eyebrow">MY ACCOUNT</div><h1>Profile<span className="heading-period">.</span></h1><p>Sign in to view your account details.</p><button className="auth-top-button" onClick={() => { setAuthMode('signin'); setAuthOpen(true); }}>Sign in</button></div></section>}
+      </section>}
+
+      {activePage === 'settings' && <section className="settings-page">
+        <section className="page-heading"><div><div className="eyebrow">MY ACCOUNT <span>·</span> PREFERENCES</div><h1>Settings<span className="heading-period">.</span></h1><p>Adjust how LabMate looks and manage your account.</p></div></section>
+        {!profile && <p className="empty-list">Sign in to manage your settings.</p>}
+        {profile && <>
+          <section className="settings-card"><div className="settings-card-heading"><div><div className="section-kicker">DISPLAY</div><h2>Reading preferences</h2></div></div>
+            <label className="settings-toggle"><span><b>Larger text</b><small>Increase labels and body text for easier reading.</small></span><input type="checkbox" checked={settingLargeText} onChange={event => setSettingLargeText(event.target.checked)} /></label>
+            <label className="settings-toggle"><span><b>Reduce motion</b><small>Limit interface transitions and animation.</small></span><input type="checkbox" checked={settingReducedMotion} onChange={event => setSettingReducedMotion(event.target.checked)} /></label>
+          </section>
+          <section className="settings-card"><div className="settings-card-heading"><div><div className="section-kicker">ACCOUNT</div><h2>Sign-in security</h2></div></div>
+            <p className="settings-description">Password reset instructions can be sent to <b>{profile.email}</b>.</p>
+            <button className="quiet-button" onClick={async () => {
+              setSettingsError(''); setSettingsMessage('');
+              const { error } = await supabase.auth.resetPasswordForEmail(profile.email, { redirectTo: window.location.origin });
+              if (error) setSettingsError(error.message); else setSettingsMessage('If this account is eligible, password reset instructions are on the way.');
+            }}>Send password reset link</button>
+            {settingsMessage && <p className="form-message success" role="status">{settingsMessage}</p>}
+            {settingsError && <p className="form-message error" role="alert">{settingsError}</p>}
+          </section>
+          {['faculty', 'assistant_professor'].includes(profile.role) && <section className="settings-card"><div className="settings-card-heading"><div><div className="section-kicker">TEACHING</div><h2>Assigned lab subjects</h2><p>You can add or remove subjects. Other approved teachers can share a subject with you.</p></div></div>
+            <div className="settings-subjects">
+              {Object.entries(years).map(([yearName, data]) => <fieldset key={yearName}><legend>{yearName}</legend>
+                {Object.entries(data.semesters).map(([semesterName, items]) => <div key={semesterName} className="teaching-semester"><b>{semesterName}</b>
+                  {items.map(course => {
+                    const key = `${data.number}::${semesterIndex[semesterName.split(' ').at(-1)]}::${course.code}::${course.subject}`;
+                    return <label className="teaching-option" key={key}><input type="checkbox" checked={assignmentDraft.includes(key)} onChange={event => setAssignmentDraft(current => event.target.checked ? [...current, key] : current.filter(item => item !== key))} /><span><b>{course.subject}{course.elective ? ` (${course.elective})` : ''}</b><small>{course.code} · {semesterName}</small></span></label>;
+                  })}
+                </div>)}
+              </fieldset>)}
+            </div>
+            {settingsError && <p className="form-message error" role="alert">{settingsError}</p>}
+            {settingsMessage && <p className="form-message success" role="status">{settingsMessage}</p>}
+            <button className="upload-button" onClick={saveTeacherAssignments} disabled={saving || assignmentDraft.length === 0}>{saving ? 'Saving…' : 'Save lab assignments'}</button>
+          </section>}
+          <section className="settings-card"><div className="settings-card-heading"><div><div className="section-kicker">GENERAL</div><h2>Your workspace</h2></div></div>
+            <dl className="profile-facts settings-facts"><div><dt>Account</dt><dd>{workspaceRole} · {profile.account_status}</dd></div><div><dt>Academic workspace</dt><dd>SPPU · Electronics &amp; Telecommunication</dd></div><div><dt>Current view</dt><dd>{year} · {semester}</dd></div></dl>
+          </section>
+        </>}
+      </section>}
+
+      {activePage === 'chat' && <section className="chat-page">
+        <section className="page-heading"><div><div className="eyebrow">LABMATE <span>·</span> GEMINI</div><h1>Study assistant<span className="heading-period">.</span></h1><p>Ask about concepts, experiment steps, or attach a small study file.</p></div><button className="upload-button" onClick={createChatSession} disabled={!profile || chatBusy}><Icon name="plus" size={15} />New chat</button></section>
+        {!profile && <p className="empty-list">Sign in to save chats and use the study assistant.</p>}
+        {profile && <div className="chat-layout">
+          <aside className="chat-sidebar"><div className="chat-sidebar-heading"><b>Saved chats</b><span>{chatSessions.length}</span></div>
+            {chatSessions.length === 0 && <p className="empty-list">No chats yet.</p>}
+            <ul>{chatSessions.map(item => <li key={item.id} className={activeChatId === item.id ? 'active' : ''}><button onClick={() => openChatSession(item.id)}>{item.title}</button><button className="chat-delete" aria-label={`Delete ${item.title}`} onClick={() => deleteChatSession(item.id)}>×</button></li>)}</ul>
+          </aside>
+          <section className="chat-conversation" aria-label="Saved study conversation">
+            {!activeChatId ? <div className="chat-empty"><Icon name="chat" size={30} /><h2>Start a study chat</h2><p>Your conversations are saved to your account. Use the attachment option for a PDF, image, audio, or video clip.</p><button className="quiet-button" onClick={createChatSession}>Start new chat</button></div> : <div className="chat-messages">
+              {chatMessages.length === 0 && <div className="chat-empty"><h2>What are you studying?</h2><p>Try asking for an explanation of an experiment or a concept.</p></div>}
+              {chatMessages.map(item => <article key={item.id} className={`chat-bubble ${item.role}`}><span>{item.role === 'user' ? profile.full_name : 'LabMate study assistant'}</span><p>{item.content}</p>{item.attachment_name && <small>Attachment: {item.attachment_name}</small>}</article>)}
+              {chatBusy && <article className="chat-bubble model"><span>LabMate study assistant</span><p>Thinking…</p></article>}
+            </div>}
+            {chatError && <p className="form-message error" role="alert">{chatError}</p>}
+            {chatMessage && <p className="form-message success" role="status">{chatMessage}</p>}
+            <form className="chat-composer" onSubmit={sendChatMessage}>
+              {chatFile && <div className="chat-file-chip">{chatFile.name}<button type="button" aria-label="Remove attachment" onClick={() => setChatFile(null)}>×</button></div>}
+              <textarea value={chatPrompt} onChange={event => setChatPrompt(event.target.value)} rows="3" maxLength="16000" placeholder="Ask a question about your studies…" aria-label="Your study question" disabled={!activeChatId && chatSessions.length > 0 && chatBusy} />
+              <div className="chat-composer-actions"><label className="chat-attach">Attach file<input type="file" accept="image/png,image/jpeg,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/wav,audio/webm,audio/ogg,audio/aac,audio/flac,video/mp4,video/webm,video/quicktime,video/mpeg" onChange={event => setChatFile(event.target.files?.[0] || null)} /></label><small>PDF, image, audio, or video · up to 2.5 MB</small><button className="upload-button" disabled={chatBusy || (!chatPrompt.trim() && !chatFile)}>{chatBusy ? 'Sending…' : 'Send'}</button></div>
+            </form>
+            <p className="chat-privacy-note">Gemini free-tier requests may be used by Google to improve its products. Do not attach sensitive personal information.</p>
+          </section>
+        </div>}
       </section>}
 
       <footer className="page-footer"><span>LabMate <span className="footer-dot">·</span> SPPU E&amp;TC lab workspace.</span><span>{profile ? 'Signed in as ' + workspaceRole : 'Sign in to view experiments and shared files.'}</span></footer>
