@@ -291,6 +291,8 @@ function App() {
   const [experiments, setExperiments] = React.useState([]);
   const [scheduleEntries, setScheduleEntries] = React.useState([]);
   const [practicalRecords, setPracticalRecords] = React.useState([]);
+  const [practicalEvidence, setPracticalEvidence] = React.useState([]);
+  const [evidenceBusy, setEvidenceBusy] = React.useState('');
   const [studentRoster, setStudentRoster] = React.useState([]);
   const [progressBusy, setProgressBusy] = React.useState(false);
   const [progressError, setProgressError] = React.useState('');
@@ -459,6 +461,24 @@ function App() {
   }, [session?.user?.id, profile?.id, activePage, selectedExperimentIds]);
 
   React.useEffect(() => {
+    if (!supabase || !session || !profile || activePage !== 'progress' || !selectedExperimentIds) {
+      setPracticalEvidence([]);
+      return undefined;
+    }
+    let mounted = true;
+    supabase.from('labmate_practical_evidence')
+      .select('id,student_id,experiment_id,original_name,storage_path,content_type,file_size,created_at')
+      .in('experiment_id', selectedExperimentIds.split(','))
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!mounted) return;
+        setPracticalEvidence(data || []);
+        if (error) setProgressError(error.message);
+      });
+    return () => { mounted = false; };
+  }, [session?.user?.id, profile?.id, activePage, selectedExperimentIds]);
+
+  React.useEffect(() => {
     if (!supabase || !session || !profile || activePage !== 'progress' || !canManage) {
       setStudentRoster([]);
       return undefined;
@@ -563,27 +583,32 @@ function App() {
     setSaving(false);
   };
 
-  const savePracticalCompletion = async (experiment, status = 'submitted', studentId = session?.user?.id) => {
-    if (!supabase || !session?.user?.id || !profile) return;
+  const savePracticalCompletion = async experiment => {
+    if (!supabase || !session?.user?.id || !profile || profile.role !== 'student') return;
+    const hasEvidence = practicalEvidence.some(item => item.experiment_id === experiment.id && item.student_id === session.user.id);
+    if (!hasEvidence) {
+      setProgressError('Upload a practical file or output screenshot before marking this complete.');
+      return;
+    }
     setProgressBusy(true);
     setProgressError('');
     setProgressMessage('');
-    const existing = practicalRecords.find(item => item.experiment_id === experiment.id && item.student_id === studentId);
+    const existing = practicalRecords.find(item => item.experiment_id === experiment.id && item.student_id === session.user.id);
     const result = existing
       ? await supabase.from('labmate_practical_records')
-        .update({ completion_status: status, updated_at: new Date().toISOString() })
+        .update({ completion_status: 'completed', updated_at: new Date().toISOString() })
         .eq('id', existing.id).select('*').single()
       : await supabase.from('labmate_practical_records').insert({
-        student_id: studentId,
+        student_id: session.user.id,
         experiment_id: experiment.id,
-        completion_status: status,
+        completion_status: 'completed',
       }).select('*').single();
     if (result.error) setProgressError(result.error.message);
     else {
       setPracticalRecords(current => current.some(item => item.id === result.data.id)
         ? current.map(item => item.id === result.data.id ? result.data : item)
         : [...current, result.data]);
-      setProgressMessage(status === 'verified' ? 'Practical completion verified.' : 'Practical marked complete and sent for faculty review.');
+      setProgressMessage('Practical marked complete.');
     }
     setProgressBusy(false);
   };
@@ -616,6 +641,64 @@ function App() {
       setProgressMessage(`Attendance saved for ${student.full_name}.`);
     }
     setProgressBusy(false);
+  };
+
+  const uploadPracticalEvidence = async (experiment, event) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (!files.length || !supabase || !session?.user?.id || profile?.role !== 'student') return;
+    const contentTypes = {
+      pdf: 'application/pdf',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ppt: 'application/vnd.ms-powerpoint',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      txt: 'text/plain',
+      zip: 'application/zip',
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+    };
+    setEvidenceBusy(experiment.id);
+    setProgressError('');
+    setProgressMessage('');
+    let uploadedCount = 0;
+    for (const file of files) {
+      if (file.size > 50 * 1024 * 1024) {
+        setProgressError(`${file.name} is over the 50 MB upload limit.`);
+        break;
+      }
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      const contentType = contentTypes[extension] || file.type;
+      if (!Object.values(contentTypes).includes(contentType)) {
+        setProgressError(`${file.name} is not a supported file type. Choose PDF, Office, text, ZIP, PNG, or JPEG.`);
+        break;
+      }
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storagePath = `${session.user.id}/${experiment.id}/${crypto.randomUUID()}-${safeName}`;
+      const { error: storageError } = await supabase.storage.from('labmate-evidence').upload(storagePath, file, { contentType, upsert: false });
+      if (storageError) {
+        setProgressError(storageError.message);
+        break;
+      }
+      const { data, error } = await supabase.from('labmate_practical_evidence').insert({
+        student_id: session.user.id,
+        experiment_id: experiment.id,
+        original_name: file.name,
+        storage_path: storagePath,
+        content_type: contentType,
+        file_size: file.size,
+      }).select('id,student_id,experiment_id,original_name,storage_path,content_type,file_size,created_at').single();
+      if (error) {
+        await supabase.storage.from('labmate-evidence').remove([storagePath]);
+        setProgressError(error.message);
+        break;
+      }
+      setPracticalEvidence(current => [data, ...current]);
+      uploadedCount += 1;
+    }
+    if (uploadedCount > 0) setProgressMessage(`${uploadedCount} evidence file${uploadedCount === 1 ? '' : 's'} uploaded.`);
+    setEvidenceBusy('');
   };
 
   const handleUpload = async event => {
@@ -687,6 +770,12 @@ function App() {
   const openSharedFile = async file => {
     const { data, error } = await supabase.storage.from('labmate-materials').createSignedUrl(file.storage_path, 3600);
     if (error) setWorkError(error.message);
+    else window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const openPracticalEvidence = async file => {
+    const { data, error } = await supabase.storage.from('labmate-evidence').createSignedUrl(file.storage_path, 3600);
+    if (error) setProgressError(error.message);
     else window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
   };
 
@@ -840,38 +929,44 @@ function App() {
 
       {activePage === 'progress' && <>
         <section className="page-heading">
-          <div><div className="eyebrow">LABMATE <span>·</span> SUBJECT TRACKING</div><h1>Attendance &amp; progress<span className="heading-period">.</span></h1><p>{canManage ? 'Record class attendance and verify submitted practicals.' : 'Track your attendance and practical completion for this subject.'}</p></div>
+          <div><div className="eyebrow">LABMATE <span>·</span> SUBJECT TRACKING</div><h1>Attendance &amp; progress<span className="heading-period">.</span></h1><p>{canManage ? 'Take in-person attendance and view practical evidence.' : 'View your attendance, upload practical evidence, and mark work complete.'}</p></div>
         </section>
-        <div className="course-context"><div><span className="section-kicker">SELECTED SUBJECT</span><b>{selectedCourse.subject}</b><small>{selectedCourse.lab} · {year} · {semester}</small></div><a className="quiet-button" href="#labs">Change subject</a></div>
+        <div className="course-context"><div><span className="section-kicker">SELECT SUBJECT</span><select className="progress-subject-select" aria-label="Choose subject for progress" value={selectedKey} onChange={event => setSelectedKey(event.target.value)}>{courses.map(course => <option key={`${course.code}::${course.subject}`} value={`${course.code}::${course.subject}`}>{course.elective ? `${course.elective} (${course.subject})` : course.subject}</option>)}</select><small>{selectedCourse.lab} · {year} · {semester}</small></div><a className="quiet-button" href="#labs">Browse labs</a></div>
         {profile && progressError && <p className="form-message error" role="alert">{progressError}</p>}
         {profile && progressMessage && <p className="form-message success" role="status">{progressMessage}</p>}
         {!profile && <p className="empty-list">Sign in to view subject attendance and practical progress.</p>}
         {profile && experiments.length === 0 && <p className="empty-list">No experiments are listed for this subject yet.</p>}
         {profile && experiments.length > 0 && <section className="progress-list" aria-label="Practical progress for selected subject">
-          <div className="progress-explainer">{canManage ? 'Select an attendance status for each student. Students can submit completed work for your review.' : 'Mark each practical complete when you finish it. Faculty can then verify your work.'}</div>
+          <div className="progress-explainer">{canManage ? 'Take roll call in the practical room: match each student’s name and roll number to the person present (ask for college ID if needed). Only faculty can save attendance; students cannot mark themselves present.' : 'Upload your practical file or output screenshot, then mark it complete. Attendance is recorded by faculty during the practical; students cannot change it.'}</div>
           {experiments.map(experiment => {
             const ownRecord = practicalRecords.find(item => item.experiment_id === experiment.id && item.student_id === session?.user?.id);
+            const ownEvidence = practicalEvidence.filter(item => item.experiment_id === experiment.id && item.student_id === session?.user?.id);
             const attendanceName = { not_marked: 'Not marked', present: 'Present', absent: 'Absent', late: 'Late' };
-            const completionName = { not_started: 'Not started', submitted: 'Awaiting faculty review', verified: 'Verified' };
+            const completionName = { not_started: 'Not started', completed: 'Completed' };
             return <article className="progress-experiment" key={experiment.id}>
               <div className="progress-experiment-heading"><div><span className="section-kicker">EXPERIMENT {experiment.experiment_number}{experiment.scheduled_on ? ` · ${new Date(`${experiment.scheduled_on}T12:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}</span><h2>{experiment.title}</h2></div></div>
               {!canManage && <div className="student-progress-row">
                 <div className="progress-statuses"><span>Attendance <b>{attendanceName[ownRecord?.attendance_status || 'not_marked']}</b></span><span>Practical <b>{completionName[ownRecord?.completion_status || 'not_started']}</b></span></div>
-                {ownRecord?.completion_status === 'not_started' || !ownRecord
-                  ? <button className="upload-button" onClick={() => savePracticalCompletion(experiment)} disabled={progressBusy}>{progressBusy ? 'Saving…' : 'Mark complete'}</button>
-                  : ownRecord.completion_status === 'submitted' ? <span className="progress-tag">Sent for review</span> : <span className="progress-tag verified"><Icon name="check" size={14} /> Verified</span>}
+                {ownRecord?.completion_status === 'completed' ? <span className="progress-tag complete"><Icon name="check" size={14} /> Completed</span> : <button className="upload-button" onClick={() => savePracticalCompletion(experiment)} disabled={progressBusy || ownEvidence.length === 0}>{progressBusy ? 'Saving…' : ownEvidence.length ? 'Mark complete' : 'Upload evidence first'}</button>}
+              </div>}
+              {!canManage && <div className="evidence-panel">
+                <p>Add your practical file and output screenshots. These uploads are private to you and faculty.</p>
+                <input className="evidence-input" type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.zip,.png,.jpg,.jpeg" aria-label={`Upload evidence for ${experiment.title}`} onChange={event => uploadPracticalEvidence(experiment, event)} disabled={evidenceBusy === experiment.id || ownRecord?.completion_status === 'completed'} />
+                {evidenceBusy === experiment.id && <small className="evidence-hint">Uploading…</small>}
+                {ownEvidence.length > 0 && <ul className="evidence-list">{ownEvidence.map(file => <li key={file.id}><span>{file.original_name}</span><button className="file-access" onClick={() => openPracticalEvidence(file)}>Open ↗</button></li>)}</ul>}
+                {ownEvidence.length === 0 && <small className="evidence-hint">No evidence uploaded yet · Max 50 MB per file</small>}
               </div>}
               {canManage && <div className="roster-list">
                 {studentRoster.length === 0 && <p className="empty-list">No active students are registered in this year yet.</p>}
                 {studentRoster.map(student => {
                   const record = practicalRecords.find(item => item.experiment_id === experiment.id && item.student_id === student.id);
+                  const studentEvidence = practicalEvidence.filter(item => item.experiment_id === experiment.id && item.student_id === student.id);
                   return <div className="roster-row" key={student.id}>
-                    <div className="roster-person"><b>{student.full_name}</b><small>Roll no. {student.roll_number} · {completionName[record?.completion_status || 'not_started']}</small></div>
-                    <select aria-label={`Attendance for ${student.full_name}`} value={record?.attendance_status || 'not_marked'} onChange={event => saveAttendance(student, experiment, event.target.value)} disabled={progressBusy}>
+                    <div className="roster-person"><b>{student.full_name}</b><small>Roll no. {student.roll_number} · Practical {completionName[record?.completion_status || 'not_started']}</small></div>
+                    <select aria-label={`Attendance for ${student.full_name}, roll number ${student.roll_number}`} value={record?.attendance_status || 'not_marked'} onChange={event => saveAttendance(student, experiment, event.target.value)} disabled={progressBusy}>
                       <option value="not_marked">Mark attendance</option><option value="present">Present</option><option value="absent">Absent</option><option value="late">Late</option>
                     </select>
-                    {record?.completion_status === 'submitted' && <button className="quiet-button" onClick={() => savePracticalCompletion(experiment, 'verified', student.id)} disabled={progressBusy}>Verify</button>}
-                    {record?.completion_status === 'verified' && <span className="progress-tag verified">Verified</span>}
+                    <div className="roster-evidence"><span>Evidence</span>{studentEvidence.length ? studentEvidence.map(file => <button key={file.id} className="file-access" onClick={() => openPracticalEvidence(file)}>{file.original_name} ↗</button>) : <small>No uploads</small>}</div>
                   </div>;
                 })}
               </div>}
