@@ -4,27 +4,95 @@ import './styles.css';
 import { supabase, supabaseConfigured } from './supabaseClient';
 
 const years = {
-  '2nd year': [
-    { code: 'CS 201', name: 'Data Structures', practicals: 8, materials: ['Course syllabus', 'Practical 01 · Arrays', 'Practical 02 · Linked lists'] },
-    { code: 'CS 202', name: 'Object-Oriented Programming', practicals: 10, materials: ['Course syllabus', 'Practical 01 · Classes & objects'] },
-    { code: 'CS 203', name: 'Database Systems', practicals: 8, materials: ['Course syllabus', 'Practical 01 · SQL basics'] },
-    { code: 'CS 204', name: 'Digital Logic', practicals: 6, materials: ['Course syllabus', 'Practical 01 · Logic gates'] },
-    { code: 'CS 205', name: 'Computer Organization', practicals: 6, materials: ['Course syllabus', 'Lab guide · Getting started'] },
-  ],
-  '3rd year': [
-    { code: 'CS 301', name: 'Java Programming', practicals: 10, materials: ['Course syllabus', 'Practical 01 · Java setup', 'Practical 02 · Classes & objects'] },
-    { code: 'CS 302', name: 'Operating Systems', practicals: 8, materials: ['Course syllabus', 'Practical 01 · Linux commands'] },
-    { code: 'CS 303', name: 'Computer Networks', practicals: 8, materials: ['Course syllabus', 'Practical 01 · Network tools'] },
-    { code: 'CS 304', name: 'Web Technologies', practicals: 10, materials: ['Course syllabus', 'Practical 01 · HTML & CSS'] },
-    { code: 'CS 305', name: 'Software Engineering', practicals: 6, materials: ['Course syllabus', 'Lab guide · Project brief'] },
-  ],
-  '4th year': [
-    { code: 'CS 401', name: 'Cloud Computing', practicals: 8, materials: ['Course syllabus', 'Practical 01 · Cloud foundations'] },
-    { code: 'CS 402', name: 'Machine Learning', practicals: 10, materials: ['Course syllabus', 'Practical 01 · Data preparation'] },
-    { code: 'CS 403', name: 'Cybersecurity', practicals: 8, materials: ['Course syllabus', 'Practical 01 · Security essentials'] },
-    { code: 'CS 404', name: 'Distributed Systems', practicals: 6, materials: ['Course syllabus', 'Practical 01 · Service basics'] },
-    { code: 'CS 405', name: 'Major Project Lab', practicals: 12, materials: ['Course syllabus', 'Project brief', 'Review checklist'] },
-  ],
+  '2nd year': {
+    pattern: 'SPPU 2024 Pattern · AY 2025–26',
+    source: 'https://www.pvgcoet.ac.in/wp-content/uploads/2026/03/SE-E-TC-2024-Pattern.pdf',
+    semesters: {
+      'Semester III': [
+        { code: 'PCC-201', name: 'Electronics Circuits', practicals: 0 },
+        { code: 'PCC-202', name: 'Engineering Mathematics III', practicals: 0 },
+        { code: 'PCC-203', name: 'Digital Electronics', practicals: 0 },
+        { code: 'PCC-204', name: 'Electronics Circuits & Digital Electronics Lab', practicals: 8, lab: true },
+        { code: 'OE-I', name: 'Open Elective I', practicals: 0, choice: 'Select the course offered by your college.' },
+        { code: 'MDM-221', name: 'Data Structures & Algorithms', practicals: 0 },
+        { code: 'MDM-222', name: 'Data Structures & Algorithms Lab', practicals: 8, lab: true },
+        { code: 'EEM-231', name: 'Engineering Economics & Applications', practicals: 0 },
+        { code: 'VEC-232', name: 'Universal Human Values & Professional Ethics', practicals: 0 },
+        { code: 'CEP-241', name: 'Community Engagement Project', practicals: 1, lab: true },
+      ],
+      'Semester IV': [
+        { code: 'PCC-251', name: 'Communication Engineering', practicals: 0 },
+        { code: 'PCC-252', name: 'Signals and Systems', practicals: 0 },
+        { code: 'PCC-253', name: 'Control Systems', practicals: 0 },
+        { code: 'PCC-254', name: 'Communication Engineering Lab', practicals: 8, lab: true },
+        { code: 'OE-II', name: 'Open Elective II', practicals: 0, choice: 'Select the course offered by your college.' },
+        { code: 'MDM-271', name: 'Object-Oriented Programming', practicals: 0 },
+        { code: 'PCC-255', name: 'Signals & Systems and Object-Oriented Programming Lab', practicals: 8, lab: true },
+        { code: 'VSE-281', name: 'Electronics Skill Development Lab', practicals: 8, lab: true },
+        { code: 'AEC-282', name: 'Modern Indian Languages (Marathi/Hindi)', practicals: 0 },
+        { code: 'EEM-283', name: 'Entrepreneurship Skill Development', practicals: 0 },
+        { code: 'VEC-284', name: 'Environment Awareness', practicals: 0 },
+      ],
+    },
+  },
+  '3rd year': {
+    pattern: 'SPPU 2024 Pattern · AY 2026–27',
+    source: 'https://www.scribd.com/document/1053274557/TE-E-TC-2024-Pattern',
+    semesters: {
+      'Semester V': [
+        { code: 'PCC-301', name: 'Microcontrollers & Applications', practicals: 0 },
+        { code: 'PCC-302', name: 'Cellular Network', practicals: 0 },
+        { code: 'PCC-303', name: 'VLSI Design', practicals: 0 },
+        { code: 'PCC-304', name: 'Microcontrollers & VLSI Design Lab', practicals: 10, lab: true },
+        { code: 'PCC-305', name: 'Cellular Network Lab', practicals: 8, lab: true },
+        { code: 'PEC-321', name: 'Elective I', practicals: 0, choice: 'Advanced Java · Computer Networks · DSP · Cloud Computing' },
+        { code: 'PEC-322', name: 'Elective I Lab', practicals: 8, lab: true },
+        { code: 'MDM-331', name: 'Minor: Machine Learning', practicals: 0 },
+        { code: 'OLE-341', name: 'Open Elective', practicals: 0, choice: 'Choose from the options offered by your college.' },
+        { code: 'ELC-342', name: 'Technical Seminar', practicals: 1, lab: true },
+      ],
+      'Semester VI': [
+        { code: 'PCC-351', name: 'Embedded System Design', practicals: 0 },
+        { code: 'PCC-352', name: 'Broadband Communication', practicals: 0 },
+        { code: 'PCC-353', name: 'Embedded System Design Lab', practicals: 8, lab: true },
+        { code: 'PCC-354', name: 'Broadband Communication Lab', practicals: 8, lab: true },
+        { code: 'PEC-361', name: 'Elective II', practicals: 0, choice: 'Web Technology · Digital Image Processing · Network & Cyber Security · CMOS Process Technology' },
+        { code: 'PEC-362', name: 'Elective III', practicals: 0, choice: 'Power Electronics · Robotics & Automation · Artificial Intelligence · Industrial IoT' },
+        { code: 'PEC-363', name: 'Elective II & III Lab', practicals: 8, lab: true },
+        { code: 'MDM-371', name: 'Minor: Database Management System', practicals: 0 },
+        { code: 'VSE-372', name: 'Mini Project', practicals: 1, lab: true },
+        { code: 'ELC-381', name: 'Internship / On-the-Job Training', practicals: 1, lab: true },
+      ],
+    },
+  },
+  '4th year': {
+    pattern: 'SPPU 2019 Pattern · current B.E. syllabus (AY 2022–23)',
+    source: 'https://www.pvgcoet.ac.in/wp-content/uploads/2026/03/B.E.-E-TC-2019-Pattern.pdf',
+    note: 'The 2024 pattern is scheduled to reach B.E. in AY 2027–28. SPPU has not published its B.E. E&TC course list yet, so this section uses the current 2019 pattern.',
+    semesters: {
+      'Semester VII': [
+        { code: '404181', name: 'Radiation & Microwave Theory', practicals: 0 },
+        { code: '404182', name: 'VLSI Design and Technology', practicals: 0 },
+        { code: '404183', name: 'Cloud Computing', practicals: 0 },
+        { code: '404184', name: 'Elective 3', practicals: 0, choice: 'Biomedical Signal Processing · Industrial Drives & Automation · Android Development · Embedded System Design' },
+        { code: '404185', name: 'Elective 4', practicals: 0, choice: 'Select the elective offered by your college.' },
+        { code: '404186', name: 'Lab Practice 1 · RMT & Cloud Computing', practicals: 8, lab: true },
+        { code: '404187', name: 'Lab Practice 2 · VLSI Design & Elective 3', practicals: 8, lab: true },
+        { code: '404188', name: 'Project Stage I', practicals: 1, lab: true },
+        { code: '404189', name: 'Mandatory Audit Course 7', practicals: 0 },
+      ],
+      'Semester VIII': [
+        { code: '404191', name: 'Fiber Optic Communication', practicals: 0 },
+        { code: '404192', name: 'Elective 5', practicals: 0, choice: 'Biomedical Signal Processing · Industrial Drives & Automation · Android Development · Embedded System Design · Mobile Computing' },
+        { code: '404193', name: 'Elective 6', practicals: 0, choice: 'System on Chip · Nano Electronics · Remote Sensing · Digital Marketing · Open Elective' },
+        { code: '404194', name: 'Innovation & Entrepreneurship', practicals: 0 },
+        { code: '404195', name: 'Digital Business Management', practicals: 0 },
+        { code: '404196', name: 'Fiber Optic Lab', practicals: 8, lab: true },
+        { code: '404197', name: 'Lab Practice 3 · Elective 5', practicals: 8, lab: true },
+        { code: '404198', name: 'Project Stage II', practicals: 1, lab: true },
+      ],
+    },
+  },
 };
 
 const initialCounts = { students: 142, faculty: 8 };
@@ -181,9 +249,10 @@ function ApprovalPanel({ client }) {
 
 function App() {
   const [year, setYear] = React.useState('3rd year');
+  const [semester, setSemester] = React.useState('Semester V');
   const [role, setRole] = React.useState('Faculty');
   const [counts, setCounts] = React.useState(initialCounts);
-  const [selectedCode, setSelectedCode] = React.useState('CS 301');
+  const [selectedCode, setSelectedCode] = React.useState('PCC-301');
   const [uploads, setUploads] = React.useState({});
   const [session, setSession] = React.useState(null);
   const [authInitialized, setAuthInitialized] = React.useState(!supabase);
@@ -193,9 +262,16 @@ function App() {
   const [authOpen, setAuthOpen] = React.useState(false);
   const [authMode, setAuthMode] = React.useState('signup');
   const uploadInput = React.useRef(null);
-  const courses = years[year];
+  const yearData = years[year];
+  const semesters = Object.keys(yearData.semesters);
+  const courses = yearData.semesters[semester] || yearData.semesters[semesters[0]];
   const selectedCourse = courses.find(course => course.code === selectedCode) || courses[0];
-  const materialList = [...selectedCourse.materials, ...(uploads[selectedCourse.code] || [])];
+  const materialList = [
+    { name: 'Official syllabus', kind: 'Syllabus reference', url: yearData.source },
+    ...(selectedCourse.lab ? [{ name: 'Lab / practical course', kind: 'Listed in the selected syllabus' }] : []),
+    ...(selectedCourse.choice ? [{ name: selectedCourse.choice, kind: 'Elective options' }] : []),
+    ...(uploads[selectedCourse.code] || []).map(name => ({ name, kind: 'Added in this session' })),
+  ];
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
   const workspaceRole = profile ? (profile.role === 'student' ? 'Student' : profile.role === 'admin' ? 'Admin' : 'Faculty') : role;
   const canUpload = profile
@@ -255,7 +331,9 @@ function App() {
 
   const chooseYear = nextYear => {
     setYear(nextYear);
-    setSelectedCode(years[nextYear][0].code);
+    const firstSemester = Object.keys(years[nextYear].semesters)[0];
+    setSemester(firstSemester);
+    setSelectedCode(years[nextYear].semesters[firstSemester][0].code);
   };
   const handleUpload = event => {
     const file = event.target.files?.[0];
@@ -285,7 +363,7 @@ function App() {
     <aside className="sidebar">
       <a className="brand" href="#home" aria-label="LabMate home"><span className="brand-mark"><Icon name="flask" size={19} /></span><span>labmate<span className="brand-period">.</span></span></a>
       <div className="workspace-label">YOUR COLLEGE</div>
-      <button className="college-select"><span className="college-avatar">C</span><span><b>Computer Science</b><small>Academic workspace</small></span><Icon name="chevron" size={15} /></button>
+      <button className="college-select"><span className="college-avatar">E</span><span><b>Electronics &amp; Telecommunication</b><small>SPPU · academic workspace</small></span><Icon name="chevron" size={15} /></button>
       <nav className="nav-list" aria-label="Main navigation">
         <a className="nav-item active" href="#home"><Icon name="grid" />Overview</a>
         <a className="nav-item" href="#subjects"><Icon name="book" />Subjects</a>
@@ -293,17 +371,17 @@ function App() {
         <a className="nav-item" href="#community"><Icon name="people" />People</a>
       </nav>
       <div className="sidebar-note"><span className="note-mark" />Start with the subjects and signups. Room planning can come later.</div>
-      <div className="sidebar-bottom"><span className="year-label">ACADEMIC YEARS</span><div className="year-list">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'year-link current' : 'year-link'}>{item}<span>{years[item].length}</span></button>)}</div><div className="profile"><div className="profile-avatar">{workspaceRole === 'Faculty' ? 'FC' : workspaceRole === 'Admin' ? 'AD' : 'ST'}</div><span><b>{profile?.full_name || (role === 'Faculty' ? 'Faculty preview' : 'Student preview')}</b><small>{profile ? workspaceRole : 'Demo workspace'}</small></span></div></div>
+      <div className="sidebar-bottom"><span className="year-label">ACADEMIC YEARS</span><div className="year-list">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'year-link current' : 'year-link'}>{item}<span>{Object.keys(years[item].semesters).length}</span></button>)}</div><div className="profile"><div className="profile-avatar">{workspaceRole === 'Faculty' ? 'FC' : workspaceRole === 'Admin' ? 'AD' : 'ST'}</div><span><b>{profile?.full_name || (role === 'Faculty' ? 'Faculty preview' : 'Student preview')}</b><small>{profile ? workspaceRole : 'Demo workspace'}</small></span></div></div>
     </aside>
 
     <main className="main-content" id="home">
       <header className="topbar"><div className="breadcrumbs">LabMate <span>/</span> Overview</div><div className="topbar-actions">{profile ? <><span className="signed-in-name">{profile.full_name}<small>{workspaceRole}</small></span><button className="quiet-button" onClick={handleSignOut}>Sign out</button></> : <><label className="role-picker"><span>Demo as</span><select value={role} onChange={event => setRole(event.target.value)} aria-label="Choose a demo role"><option>Faculty</option><option>Student</option></select><Icon name="chevron" size={14} /></label><button className="quiet-button" onClick={() => { setAuthMode('signin'); setAuthOpen(true); }}>Sign in</button><button className="auth-top-button" onClick={() => { setAuthMode('signup'); setAuthOpen(true); }}>Create account</button></>}<button className="icon-button" aria-label="Search"><Icon name="search" size={17} /></button></div></header>
-      <section className="page-heading"><div><div className="eyebrow">ACADEMIC WORKSPACE <span>·</span> SAMPLE CURRICULUM</div><h1>Make room for learning<span className="heading-period">.</span></h1><p>Subjects, practicals, and course materials in one place.</p></div><div className="year-switch" role="group" aria-label="Choose academic year">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'selected' : ''}>{item}</button>)}</div></section>
+      <section className="page-heading"><div><div className="eyebrow">SPPU E&amp;TC <span>·</span> CURRICULUM BY YEAR</div><h1>Make room for learning<span className="heading-period">.</span></h1><p>Browse semester subjects, labs, practicals, and shared course material.</p></div><div className="year-switch" role="group" aria-label="Choose academic year">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'selected' : ''}>{item}</button>)}</div></section>
 
       <section className="metrics-grid" id="community" aria-label="Signup overview">
         <article className="metric-card"><div className="metric-top"><span>STUDENT SIGNUPS</span><Icon name="people" size={17} /></div><div className="metric-value">{counts.students}<span className="metric-unit"> students</span></div><div className="metric-foot">Across the three active years</div></article>
         <article className="metric-card"><div className="metric-top"><span>FACULTY SIGNUPS</span><Icon name="people" size={17} /></div><div className="metric-value">{counts.faculty}<span className="metric-unit"> faculty</span></div><div className="metric-foot">Shared across subjects</div></article>
-        <article className="metric-card"><div className="metric-top"><span>{year.toUpperCase()} SUBJECTS</span><Icon name="book" size={17} /></div><div className="metric-value">05<span className="metric-unit"> subjects</span></div><div className="metric-foot">Each includes practical work</div></article>
+        <article className="metric-card"><div className="metric-top"><span>{semester.toUpperCase()} COURSES</span><Icon name="book" size={17} /></div><div className="metric-value">{courses.length}<span className="metric-unit"> courses</span></div><div className="metric-foot">Includes separately listed labs and projects</div></article>
       </section>
 
       <section className="access-rules" aria-label="Signup and approval rules">
@@ -312,23 +390,25 @@ function App() {
       </section>
       {profile?.role === 'admin' && <ApprovalPanel client={supabase} />}
 
-      <div className="section-heading" id="subjects"><div><div className="section-kicker">CURRICULUM</div><h2>{year} subjects</h2><p>Choose a subject to see its practicals and shared material.</p></div><span className="curriculum-tag">Demo curriculum · update to your syllabus</span></div>
+      <div className="section-heading" id="subjects"><div><div className="section-kicker">CURRICULUM</div><h2>{year} · {semester}</h2><p>Choose a course to see lab status, elective choices, and shared material.</p></div><a className="curriculum-tag" href={yearData.source} target="_blank" rel="noreferrer">{yearData.pattern} · source ↗</a></div>
+      <div className="semester-switch" role="group" aria-label="Choose semester">{semesters.map(item => <button key={item} onClick={() => { setSemester(item); setSelectedCode(yearData.semesters[item][0].code); }} className={semester === item ? 'selected' : ''}>{item}</button>)}</div>
+      {yearData.note && <p className="curriculum-note">{yearData.note}</p>}
       <div className="workspace-grid">
         <section className="subject-panel" aria-label="Subject list">
-          <div className="panel-topline"><span>SUBJECT</span><span>PRACTICALS</span></div>
-          <div className="subject-list">{courses.map(course => <button key={course.code} onClick={() => setSelectedCode(course.code)} className={selectedCourse.code === course.code ? 'subject-row selected' : 'subject-row'}><span className="subject-code">{course.code}</span><span className="subject-name"><b>{course.name}</b><small>{course.materials.length + (uploads[course.code]?.length || 0)} learning materials</small></span><span className="practical-count">{course.practicals}<small>practicals</small></span><Icon name="arrow" size={15} /></button>)}</div>
-          <div className="subject-footer"><span className="check-icon"><Icon name="check" size={14} /></span>Five subjects per academic year</div>
+          <div className="panel-topline"><span>COURSE</span><span>TYPE</span></div>
+          <div className="subject-list">{courses.map(course => <button key={course.code} onClick={() => setSelectedCode(course.code)} className={selectedCourse.code === course.code ? 'subject-row selected' : 'subject-row'}><span className="subject-code">{course.code}</span><span className="subject-name"><b>{course.name}</b><small>{course.lab ? 'Lab / practical / project' : course.choice ? 'Elective' : 'Theory'}</small></span><span className="practical-count">{course.lab ? 'Lab' : '—'}<small>{course.lab ? 'course' : 'theory'}</small></span><Icon name="arrow" size={15} /></button>)}</div>
+          <div className="subject-footer"><span className="check-icon"><Icon name="check" size={14} /></span>{courses.filter(course => course.lab).length} lab, practical, or project courses in this semester</div>
         </section>
 
         <section className="detail-panel" id="materials">
-          <div className="detail-heading"><div><div className="section-kicker">SUBJECT DETAILS</div><h2>{selectedCourse.name}</h2><p>{selectedCourse.code} <span>·</span> {year}</p></div><span className="subject-glyph"><Icon name="flask" size={20} /></span></div>
-          <div className="detail-stats"><div><b>{selectedCourse.practicals}</b><span>practical sessions</span></div><div><b>{materialList.length}</b><span>shared materials</span></div></div>
+          <div className="detail-heading"><div><div className="section-kicker">COURSE DETAILS</div><h2>{selectedCourse.name}</h2><p>{selectedCourse.code} <span>·</span> {year} · {semester}</p></div><span className="subject-glyph"><Icon name={selectedCourse.lab ? 'flask' : 'book'} size={20} /></span></div>
+          <div className="detail-stats"><div><b>{selectedCourse.lab ? 'Yes' : '—'}</b><span>lab / practical course</span></div><div><b>{materialList.length}</b><span>references &amp; materials</span></div></div>
           <div className="material-heading"><h3>Practicals & materials</h3>{canUpload && <button className="upload-button" onClick={() => uploadInput.current?.click()}><Icon name="upload" size={15} />Add material</button>}</div>
           <input ref={uploadInput} className="file-input" type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.zip,.png,.jpg,.jpeg" onChange={handleUpload} aria-label="Upload syllabus or practical material" />
           {canUpload && <p className="upload-hint">Add a syllabus, lab sheet, or experiment guide. This preview keeps filenames in this session only.</p>}
           {!canUpload && <p className="upload-hint">Materials shared by faculty for your practical work.</p>}
-          <ul className="material-list">{materialList.map((material, index) => <li key={material + index}><span className="file-glyph"><Icon name="file" size={15} /></span><span className="file-name">{material}<small>{material.toLowerCase().includes('syllabus') ? 'Syllabus' : 'Practical resource'}</small></span><span className="file-access">{role === 'Student' ? 'Available' : 'Shared'}</span></li>)}</ul>
-          <div className="detail-bottom"><span>For next term, add the actual subject names and faculty roster.</span><Icon name="arrow" size={15} /></div>
+          <ul className="material-list">{materialList.map((material, index) => <li key={material.name + index}><span className="file-glyph"><Icon name="file" size={15} /></span><span className="file-name">{material.name}<small>{material.kind}</small></span>{material.url ? <a className="file-access" href={material.url} target="_blank" rel="noreferrer">Open ↗</a> : <span className="file-access">{role === 'Student' ? 'Available' : 'Shared'}</span>}</li>)}</ul>
+          <div className="detail-bottom"><span>Faculty can add experiment sheets, notes, and syllabus material.</span><Icon name="arrow" size={15} /></div>
         </section>
       </div>
       <footer className="page-footer"><span>LabMate <span className="footer-dot">·</span> Make room for learning.</span><span>{apiUrl ? 'API configured' : 'Demo workspace · signup totals are examples'}</span></footer>
