@@ -448,3 +448,69 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
   .profile-facts>div { padding-top: 13px; }
   .profile-facts dd { font-size: 13px; }
 }
+
+.home-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 38px; padding: 0 11px; color: #dfeaf0; border: 1px solid #29435f;
+  border-radius: 5px; background: #0d1d34; font-size: 11px; text-decoration: none;
+}
+.home-button:hover { background: #142d4b; }
+.dashboard-context {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding: 11px 14px;
+  border: 1px solid #203650; border-radius: 6px; background: #0a1730;
+}
+.dashboard-context>.section-kicker { margin: 0; }
+.dashboard-context>b { color: #dce8ef; font-size: 12px; }
+.dashboard-context .semester-switch { margin: 0 0 0 auto; }
+.dashboard-section { margin-top: 28px; }
+.dashboard-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.dashboard-link {
+  display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 76px; padding: 13px;
+  color: inherit; border: 1px solid #203650; border-radius: 6px; background: #0a1730; text-decoration: none;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.dashboard-link:hover { border-color: #55799c; background: #0d1d34; }
+.dashboard-link>span:nth-child(2) { display: grid; flex: 1; gap: 5px; min-width: 0; }
+.dashboard-link b { color: #e8f0f4; font-size: 13px; font-weight: 600; }
+.dashboard-link small { color: #94a6b6; font-size: 11px; line-height: 1.4; }
+.dashboard-link>svg { flex: none; color: #a9c7d8; }
+.dashboard-link-icon {
+  display: grid; place-items: center; flex: none; width: 36px; height: 36px;
+  color: #c5d9e5; border: 1px solid #35577b; border-radius: 5px; background: #142d4b;
+}
+.labs-panel { width: 100%; }
+.labs-next-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.labs-next-actions>span { flex: 1; color: #9aabba; font-size: 11px; }
+.labs-next-actions>span b { color: #e2ebf0; }
+.labs-next-actions .quiet-button { display: inline-flex; align-items: center; text-decoration: none; }
+.course-context {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 13px; padding: 14px 16px;
+  border: 1px solid #203650; border-radius: 6px; background: #0a1730;
+}
+.course-context>div { display: grid; gap: 5px; min-width: 0; }
+.course-context b { overflow-wrap: anywhere; color: #eaf1f6; font: 600 14px Manrope, sans-serif; }
+.course-context small { color: #9aabba; font-size: 11px; line-height: 1.45; }
+.course-context .quiet-button { flex: none; display: inline-flex; align-items: center; text-decoration: none; }
+.page-detail-panel { padding: 23px; }
+.page-detail-panel .experiment-section, .page-detail-panel .page-materials-section { margin: 0; padding: 0; border: 0; }
+.page-detail-panel .material-heading h2 { color: #ecf2f6; font: 600 17px Manrope, sans-serif; }
+.page-detail-panel .experiment-list { margin-top: 12px; }
+.page-detail-panel .experiment-list li { padding: 13px 0; }
+.page-detail-panel .experiment-item b { font-size: 12px; }
+.page-detail-panel .experiment-item small { font-size: 11px; }
+.page-detail-panel .materials-section { margin: 0; padding: 0; border: 0; }
+@media (max-width: 740px) {
+  .home-button { min-height: 36px; padding: 0 9px; font-size: 12px; }
+  .dashboard-context { align-items: flex-start; flex-wrap: wrap; gap: 8px 10px; }
+  .dashboard-context>.section-kicker { flex: 1 0 100%; }
+  .dashboard-context .semester-switch { flex: 1 0 100%; margin: 2px 0 0; }
+  .dashboard-links { grid-template-columns: 1fr; gap: 9px; }
+  .dashboard-link { min-height: 68px; }
+  .labs-next-actions { align-items: stretch; flex-wrap: wrap; }
+  .labs-next-actions>span { flex: 1 0 100%; }
+  .labs-next-actions .quiet-button { flex: 1; justify-content: center; }
+  .course-context { align-items: flex-start; flex-direction: column; gap: 10px; padding: 13px; }
+  .page-detail-panel { padding: 16px 13px; }
+  .page-detail-panel .experiment-item { gap: 8px; }
+  .page-detail-panel .experiment-item b { font-size: 12px; }
+}
