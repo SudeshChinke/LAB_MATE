@@ -116,6 +116,12 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
 .section-heading h2, .detail-heading h2 { color: #ecf2f6; font: 600 17px Manrope, sans-serif; letter-spacing: -.25px; }
 .section-heading p { margin-top: 5px; color: #94a6b6; font-size: 10px; }
 .curriculum-tag { padding: 6px 9px; color: #b9ccda; border: 1px solid #26415e; border-radius: 4px; background: #0c1b34; font-size: 9px; white-space: nowrap; }
+.curriculum-tag { display: inline-flex; align-items: center; text-decoration: none; }
+.curriculum-tag:hover { border-color: #6e8da7; color: #edf4f7; }
+.semester-switch { display: flex; gap: 5px; margin: 0 0 12px; padding: 4px; width: fit-content; border: 1px solid #203752; border-radius: 6px; background: #09162c; }
+.semester-switch button { padding: 8px 13px; color: #96aaba; border: 0; border-radius: 4px; background: transparent; font-size: 10px; cursor: pointer; }
+.semester-switch button.selected { color: #f0f5f7; background: #1a3f75; }
+.curriculum-note { margin: 0 0 12px; padding: 11px 13px; color: #c3d2dc; border: 1px solid #29435f; border-radius: 5px; background: #0d1d34; font-size: 10px; line-height: 1.5; }
 .workspace-grid { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(340px, .88fr); gap: 13px; }
 .subject-panel, .detail-panel { min-width: 0; border: 1px solid #203650; border-radius: 6px; background: #0a1730; }
 .subject-panel { padding: 0 17px; }
@@ -210,6 +216,9 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
   .section-heading h2, .detail-heading h2 { font-size: 20px; }
   .section-heading p { font-size: 12px; }
   .curriculum-tag { padding: 8px 11px; font-size: 11px; }
+  .semester-switch { margin-bottom: 15px; }
+  .semester-switch button { padding: 9px 15px; font-size: 12px; }
+  .curriculum-note { font-size: 12px; }
   .workspace-grid { gap: 18px; }
   .subject-panel { padding-right: 22px; padding-left: 22px; }
   .panel-topline { padding-top: 17px; padding-bottom: 13px; font-size: 10px; }
@@ -256,6 +265,10 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
   h1 { font-size: 23px; }
   .year-switch { width: 100%; }
   .year-switch button { flex: 1; padding: 8px 5px; }
+  .section-heading { align-items: flex-start; flex-direction: column; }
+  .curriculum-tag { white-space: normal; }
+  .semester-switch { width: 100%; }
+  .semester-switch button { flex: 1; padding: 8px 5px; }
   .metrics-grid { grid-template-columns: 1fr; gap: 8px; }
   .access-rules { grid-template-columns: 1fr; gap: 8px; }
   .metric-card { min-height: 92px; padding: 12px 14px; }
