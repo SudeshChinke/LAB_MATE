@@ -514,3 +514,48 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
   .page-detail-panel .experiment-item { gap: 8px; }
   .page-detail-panel .experiment-item b { font-size: 12px; }
 }
+
+/* Clearer, roomier account screens in LabMate's muted blue palette. */
+.auth-dialog {
+  width: min(100%, 500px); padding: 31px;
+  border-color: #3b5874; border-radius: 12px;
+  background: linear-gradient(160deg, #10213a 0%, #09162c 48%, #081327 100%);
+  box-shadow: 0 28px 90px rgb(0 0 0 / 56%);
+}
+.auth-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 22px; }
+.auth-brand-mark {
+  display: grid; place-items: center; width: 42px; height: 42px; flex: none;
+  color: #d6e4eb; border: 1px solid #53728b; border-radius: 10px; background: #18334e;
+}
+.auth-brand>span:last-child { display: grid; gap: 4px; }
+.auth-brand b { color: #f0f5f7; font: 600 16px Manrope, sans-serif; letter-spacing: -.2px; }
+.auth-brand small { color: #9cb1c0; font: 9px 'DM Mono', monospace; letter-spacing: 1px; }
+.auth-kicker { margin-bottom: 4px; }
+.auth-dialog h2 { margin-top: 7px; font-size: 25px; }
+.auth-intro { max-width: 42ch; font-size: 12px; line-height: 1.65; }
+.auth-form { gap: 15px; margin-top: 22px; }
+.auth-form label { gap: 7px; color: #d1dce4; font-size: 12px; }
+.auth-form input, .auth-form select { min-height: 46px; padding: 0 12px; border-color: #334f6b; border-radius: 7px; background: #08162b; font-size: 13px; }
+.auth-form input:hover, .auth-form select:hover { border-color: #526f88; }
+.student-fields { gap: 12px; }
+.student-fields .student-branch { grid-column: 1 / -1; }
+.branch-note { margin-top: -7px; color: #95aabb; font-size: 11px; line-height: 1.55; }
+.setup-notice, .form-message { padding: 12px 13px; border-radius: 7px; font-size: 11px; }
+.auth-submit { min-height: 48px; border-color: #66839b; border-radius: 7px; background: #294865; font-size: 13px; letter-spacing: .1px; }
+.auth-submit:hover:not(:disabled) { background: #345672; }
+.auth-switch { margin-top: 20px; padding-top: 17px; border-top: 1px solid #243b54; font-size: 12px; }
+.auth-switch button { margin-left: 4px; font-weight: 600; }
+.auth-forgot { margin-top: -8px; }
+.auth-forgot button { font-size: 12px; }
+@media (max-width: 740px) {
+  .auth-dialog { padding: 26px 21px; border-radius: 11px; }
+  .auth-brand { margin-bottom: 19px; }
+  .auth-dialog h2 { font-size: 23px; }
+  .auth-form { gap: 14px; }
+  .auth-form label { font-size: 12px; }
+  .auth-form input, .auth-form select { min-height: 46px; font-size: 16px; }
+  .student-fields { grid-template-columns: 1fr; }
+  .student-fields .student-branch { grid-column: auto; }
+  .branch-note { font-size: 11px; }
+}
+
