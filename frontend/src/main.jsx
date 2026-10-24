@@ -37,7 +37,7 @@ const years = {
   },
   '3rd year': {
     pattern: 'SPPU 2024 Pattern · AY 2026–27',
-    source: 'https://www.scribd.com/document/1053274557/TE-E-TC-2024-Pattern',
+    source: 'https://aissmscoe.com/wp-content/uploads/2026/07/TE_EandTC-_2024-PatR1_23062026.pdf',
     semesters: {
       'Semester V': [
         { code: 'PCC-301', name: 'Microcontrollers & Applications', practicals: 0 },
