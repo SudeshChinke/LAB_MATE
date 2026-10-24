@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
+import { supabase, supabaseConfigured } from './supabaseClient';
 
 const years = {
   '2nd year': [
@@ -46,17 +47,203 @@ function Icon({ name, size = 18 }) {
   return <svg {...props}>{paths[name]}</svg>;
 }
 
+function AuthDialog({ mode, setMode, onClose }) {
+  const [accountType, setAccountType] = React.useState('student');
+  const [message, setMessage] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+
+  const handleSubmit = async event => {
+    event.preventDefault();
+    setMessage('');
+    setError('');
+    if (!supabase) {
+      setError('Account sign-in is not configured yet. The dashboard is still in demo mode.');
+      return;
+    }
+    setBusy(true);
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get('email') || '').trim().toLowerCase();
+    const password = String(form.get('password') || '');
+
+    try {
+      if (mode === 'signup') {
+        const metadata = {
+          full_name: String(form.get('full_name') || '').trim(),
+          account_type: accountType,
+          roll_number: accountType === 'student' ? String(form.get('roll_number') || '').trim() : null,
+          academic_year: accountType === 'student' ? Number(form.get('academic_year')) : null,
+        };
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: metadata,
+            emailRedirectTo: window.location.origin,
+          },
+        });
+        if (signUpError) throw signUpError;
+        if (data.session) {
+          onClose();
+        } else {
+          setMessage(accountType === 'student'
+            ? 'Check your inbox and confirm your email before signing in.'
+            : 'Check your inbox to confirm your email. Your access request will wait for admin approval.');
+        }
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
+        onClose();
+      }
+    } catch (authError) {
+      setError(authError.message || 'We could not complete that request. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <div className="dialog-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && onClose()}>
+    <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+      <button className="dialog-close" onClick={onClose} aria-label="Close account dialog">×</button>
+      <div className="section-kicker">LABMATE ACCOUNT</div>
+      <h2 id="auth-title">{mode === 'signup' ? 'Create your account' : 'Welcome back'}</h2>
+      <p className="auth-intro">{mode === 'signup' ? 'Use your regular email address. We’ll send a verification link.' : 'Sign in with your verified email address.'}</p>
+      {!supabaseConfigured && <div className="setup-notice">Account service setup is still being completed. You can explore the demo meanwhile.</div>}
+      <form className="auth-form" onSubmit={handleSubmit}>
+        {mode === 'signup' && <>
+          <label>Account type
+            <select value={accountType} onChange={event => setAccountType(event.target.value)}>
+              <option value="student">Student</option>
+              <option value="faculty">Faculty</option>
+              <option value="assistant_professor">Assistant professor</option>
+            </select>
+          </label>
+          <label>Full name<input name="full_name" autoComplete="name" required minLength="2" maxLength="120" /></label>
+        </>}
+        <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
+        <label>Password<input name="password" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} required minLength="8" /></label>
+        {mode === 'signup' && accountType === 'student' && <div className="student-fields">
+          <label>College roll number<input name="roll_number" autoComplete="off" required maxLength="40" /></label>
+          <label>Academic year<select name="academic_year" defaultValue="2"><option value="2">2nd year</option><option value="3">3rd year</option><option value="4">4th year</option></select></label>
+        </div>}
+        {mode === 'signup' && accountType !== 'student' && <div className="setup-notice">Faculty access starts as pending and becomes available after admin approval.</div>}
+        {message && <div className="form-message success" role="status">{message}</div>}
+        {error && <div className="form-message error" role="alert">{error}</div>}
+        <button className="auth-submit" type="submit" disabled={busy || !supabaseConfigured}>{busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}</button>
+      </form>
+      <div className="auth-switch">{mode === 'signup' ? 'Already registered?' : 'New to LabMate?'} <button onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setMessage(''); setError(''); }}>{mode === 'signup' ? 'Sign in' : 'Create an account'}</button></div>
+    </section>
+  </div>;
+}
+
+function ApprovalPanel({ client }) {
+  const [pending, setPending] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [notice, setNotice] = React.useState('');
+  const [error, setError] = React.useState('');
+
+  const loadPending = React.useCallback(async () => {
+    setLoading(true);
+    setError('');
+    const { data, error: queryError } = await client.from('profiles')
+      .select('id,full_name,email,role,created_at')
+      .eq('account_status', 'pending')
+      .in('role', ['faculty', 'assistant_professor'])
+      .order('created_at', { ascending: true });
+    if (queryError) setError(queryError.message);
+    else setPending(data || []);
+    setLoading(false);
+  }, [client]);
+
+  React.useEffect(() => { loadPending(); }, [loadPending]);
+
+  const updateStatus = async (id, status) => {
+    setNotice('');
+    setError('');
+    const { error: updateError } = await client.from('profiles').update({ account_status: status }).eq('id', id);
+    if (updateError) setError(updateError.message);
+    else {
+      setNotice(status === 'approved' ? 'Access approved.' : 'Request declined.');
+      loadPending();
+    }
+  };
+
+  return <section className="approval-panel" aria-label="Faculty access requests">
+    <div className="approval-heading"><div><div className="section-kicker">ADMIN</div><h2>Faculty access requests</h2></div><button className="quiet-button" onClick={loadPending}>Refresh</button></div>
+    {notice && <p className="form-message success" role="status">{notice}</p>}
+    {error && <p className="form-message error" role="alert">{error}</p>}
+    {loading ? <p className="empty-approvals">Loading requests…</p> : pending.length === 0 ? <p className="empty-approvals">No faculty requests need review.</p> : <ul className="approval-list">{pending.map(person => <li key={person.id}>
+      <div><b>{person.full_name}</b><span>{person.email}</span><small>{person.role === 'assistant_professor' ? 'Assistant professor' : 'Faculty'}</small></div>
+      <div className="approval-actions"><button onClick={() => updateStatus(person.id, 'approved')}>Approve</button><button className="decline" onClick={() => updateStatus(person.id, 'rejected')}>Decline</button></div>
+    </li>)}</ul>}
+  </section>;
+}
+
 function App() {
   const [year, setYear] = React.useState('3rd year');
   const [role, setRole] = React.useState('Faculty');
   const [counts, setCounts] = React.useState(initialCounts);
   const [selectedCode, setSelectedCode] = React.useState('CS 301');
   const [uploads, setUploads] = React.useState({});
+  const [session, setSession] = React.useState(null);
+  const [authInitialized, setAuthInitialized] = React.useState(!supabase);
+  const [profile, setProfile] = React.useState(null);
+  const [profileLoading, setProfileLoading] = React.useState(Boolean(supabase));
+  const [profileError, setProfileError] = React.useState('');
+  const [authOpen, setAuthOpen] = React.useState(false);
+  const [authMode, setAuthMode] = React.useState('signup');
   const uploadInput = React.useRef(null);
   const courses = years[year];
   const selectedCourse = courses.find(course => course.code === selectedCode) || courses[0];
   const materialList = [...selectedCourse.materials, ...(uploads[selectedCourse.code] || [])];
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  const workspaceRole = profile ? (profile.role === 'student' ? 'Student' : profile.role === 'admin' ? 'Admin' : 'Faculty') : role;
+  const canUpload = profile
+    ? ['faculty', 'assistant_professor', 'admin'].includes(profile.role) && ['active', 'approved'].includes(profile.account_status)
+    : role === 'Faculty';
+
+  React.useEffect(() => {
+    if (!supabase) {
+      setProfileLoading(false);
+      return undefined;
+    }
+    let mounted = true;
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!mounted) return;
+      if (error) setProfileError(error.message);
+      setSession(data.session);
+      setAuthInitialized(true);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setAuthInitialized(true);
+      if (!nextSession) setProfile(null);
+      setProfileError('');
+    });
+    return () => { mounted = false; subscription.unsubscribe(); };
+  }, []);
+
+  React.useEffect(() => {
+    if (!supabase || !authInitialized) return undefined;
+    if (!session?.user?.id) {
+      setProfile(null);
+      setProfileLoading(false);
+      return undefined;
+    }
+    let mounted = true;
+    setProfileLoading(true);
+    supabase.from('profiles')
+      .select('id,full_name,email,role,account_status,roll_number,academic_year')
+      .eq('id', session.user.id)
+      .single()
+      .then(({ data, error }) => {
+        if (!mounted) return;
+        setProfile(data || null);
+        setProfileError(error?.message || '');
+        setProfileLoading(false);
+      });
+    return () => { mounted = false; };
+  }, [authInitialized, session?.user?.id]);
 
   React.useEffect(() => {
     if (!apiUrl) return;
@@ -80,6 +267,20 @@ function App() {
     event.target.value = '';
   };
 
+  const handleSignOut = async () => {
+    if (supabase) await supabase.auth.signOut();
+  };
+
+  if (!authInitialized || profileLoading) return <div className="account-state"><div className="account-state-card"><span className="brand-mark"><Icon name="flask" size={19} /></span><p>Loading your LabMate account…</p></div></div>;
+  if (session && (!profile || !['active', 'approved'].includes(profile.account_status))) return <div className="account-state"><div className="account-state-card">
+    <span className="brand-mark"><Icon name="flask" size={19} /></span>
+    <div className="section-kicker">LABMATE ACCOUNT</div>
+    <h1>{profileError ? 'Account setup problem' : profile?.account_status === 'rejected' ? 'Request not approved' : profile?.role === 'student' ? 'Confirm your email' : 'Waiting for admin approval'}</h1>
+    <p>{profileError ? 'We could not load your account details. Please try signing in again.' : profile?.account_status === 'rejected' ? 'Your access request was declined. Please contact your college admin for help.' : profile?.role === 'student' ? 'Confirm your email address, then sign in to open your workspace.' : 'Your email is verified. An admin must approve faculty access before the workspace opens.'}</p>
+    {profileError && <p className="account-error">{profileError}</p>}
+    <button className="auth-submit" onClick={handleSignOut}>Sign out</button>
+  </div></div>;
+
   return <div className="app-shell">
     <aside className="sidebar">
       <a className="brand" href="#home" aria-label="LabMate home"><span className="brand-mark"><Icon name="flask" size={19} /></span><span>labmate<span className="brand-period">.</span></span></a>
@@ -92,11 +293,11 @@ function App() {
         <a className="nav-item" href="#community"><Icon name="people" />People</a>
       </nav>
       <div className="sidebar-note"><span className="note-mark" />Start with the subjects and signups. Room planning can come later.</div>
-      <div className="sidebar-bottom"><span className="year-label">ACADEMIC YEARS</span><div className="year-list">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'year-link current' : 'year-link'}>{item}<span>{years[item].length}</span></button>)}</div><div className="profile"><div className="profile-avatar">{role === 'Faculty' ? 'FC' : 'ST'}</div><span><b>{role === 'Faculty' ? 'Faculty preview' : 'Student preview'}</b><small>Demo workspace</small></span></div></div>
+      <div className="sidebar-bottom"><span className="year-label">ACADEMIC YEARS</span><div className="year-list">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'year-link current' : 'year-link'}>{item}<span>{years[item].length}</span></button>)}</div><div className="profile"><div className="profile-avatar">{workspaceRole === 'Faculty' ? 'FC' : workspaceRole === 'Admin' ? 'AD' : 'ST'}</div><span><b>{profile?.full_name || (role === 'Faculty' ? 'Faculty preview' : 'Student preview')}</b><small>{profile ? workspaceRole : 'Demo workspace'}</small></span></div></div>
     </aside>
 
     <main className="main-content" id="home">
-      <header className="topbar"><div className="breadcrumbs">LabMate <span>/</span> Overview</div><div className="topbar-actions"><label className="role-picker"><span>Viewing as</span><select value={role} onChange={event => setRole(event.target.value)} aria-label="Choose a demo role"><option>Faculty</option><option>Student</option></select><Icon name="chevron" size={14} /></label><button className="icon-button" aria-label="Search"><Icon name="search" size={17} /></button></div></header>
+      <header className="topbar"><div className="breadcrumbs">LabMate <span>/</span> Overview</div><div className="topbar-actions">{profile ? <><span className="signed-in-name">{profile.full_name}<small>{workspaceRole}</small></span><button className="quiet-button" onClick={handleSignOut}>Sign out</button></> : <><label className="role-picker"><span>Demo as</span><select value={role} onChange={event => setRole(event.target.value)} aria-label="Choose a demo role"><option>Faculty</option><option>Student</option></select><Icon name="chevron" size={14} /></label><button className="quiet-button" onClick={() => { setAuthMode('signin'); setAuthOpen(true); }}>Sign in</button><button className="auth-top-button" onClick={() => { setAuthMode('signup'); setAuthOpen(true); }}>Create account</button></>}<button className="icon-button" aria-label="Search"><Icon name="search" size={17} /></button></div></header>
       <section className="page-heading"><div><div className="eyebrow">ACADEMIC WORKSPACE <span>·</span> SAMPLE CURRICULUM</div><h1>Make room for learning<span className="heading-period">.</span></h1><p>Subjects, practicals, and course materials in one place.</p></div><div className="year-switch" role="group" aria-label="Choose academic year">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'selected' : ''}>{item}</button>)}</div></section>
 
       <section className="metrics-grid" id="community" aria-label="Signup overview">
@@ -109,6 +310,7 @@ function App() {
         <article className="access-rule"><span className="access-icon"><Icon name="people" size={17} /></span><div><div className="section-kicker">STUDENT ACCESS</div><h2>Students can sign up</h2><p>Use their name, normal email address, and college roll number.</p></div><span className="rule-status open">SELF SIGNUP</span></article>
         <article className="access-rule"><span className="access-icon"><Icon name="book" size={17} /></span><div><div className="section-kicker">FACULTY ACCESS</div><h2>Admin approval required</h2><p>Faculty and assistant professors request access; an admin approves them.</p></div><span className="rule-status review">REVIEW</span></article>
       </section>
+      {profile?.role === 'admin' && <ApprovalPanel client={supabase} />}
 
       <div className="section-heading" id="subjects"><div><div className="section-kicker">CURRICULUM</div><h2>{year} subjects</h2><p>Choose a subject to see its practicals and shared material.</p></div><span className="curriculum-tag">Demo curriculum · update to your syllabus</span></div>
       <div className="workspace-grid">
@@ -121,16 +323,17 @@ function App() {
         <section className="detail-panel" id="materials">
           <div className="detail-heading"><div><div className="section-kicker">SUBJECT DETAILS</div><h2>{selectedCourse.name}</h2><p>{selectedCourse.code} <span>·</span> {year}</p></div><span className="subject-glyph"><Icon name="flask" size={20} /></span></div>
           <div className="detail-stats"><div><b>{selectedCourse.practicals}</b><span>practical sessions</span></div><div><b>{materialList.length}</b><span>shared materials</span></div></div>
-          <div className="material-heading"><h3>Practicals & materials</h3>{role === 'Faculty' && <button className="upload-button" onClick={() => uploadInput.current?.click()}><Icon name="upload" size={15} />Add material</button>}</div>
+          <div className="material-heading"><h3>Practicals & materials</h3>{canUpload && <button className="upload-button" onClick={() => uploadInput.current?.click()}><Icon name="upload" size={15} />Add material</button>}</div>
           <input ref={uploadInput} className="file-input" type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.zip,.png,.jpg,.jpeg" onChange={handleUpload} aria-label="Upload syllabus or practical material" />
-          {role === 'Faculty' && <p className="upload-hint">Add a syllabus, lab sheet, or experiment guide. This preview keeps filenames in this session only.</p>}
-          {role === 'Student' && <p className="upload-hint">Materials shared by faculty for your practical work.</p>}
+          {canUpload && <p className="upload-hint">Add a syllabus, lab sheet, or experiment guide. This preview keeps filenames in this session only.</p>}
+          {!canUpload && <p className="upload-hint">Materials shared by faculty for your practical work.</p>}
           <ul className="material-list">{materialList.map((material, index) => <li key={material + index}><span className="file-glyph"><Icon name="file" size={15} /></span><span className="file-name">{material}<small>{material.toLowerCase().includes('syllabus') ? 'Syllabus' : 'Practical resource'}</small></span><span className="file-access">{role === 'Student' ? 'Available' : 'Shared'}</span></li>)}</ul>
           <div className="detail-bottom"><span>For next term, add the actual subject names and faculty roster.</span><Icon name="arrow" size={15} /></div>
         </section>
       </div>
       <footer className="page-footer"><span>LabMate <span className="footer-dot">·</span> Make room for learning.</span><span>{apiUrl ? 'API configured' : 'Demo workspace · signup totals are examples'}</span></footer>
     </main>
+    {authOpen && <AuthDialog mode={authMode} setMode={setAuthMode} onClose={() => setAuthOpen(false)} />}
   </div>;
 }
 
