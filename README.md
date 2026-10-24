@@ -7,7 +7,7 @@ LabMate is a Java-first college lab management starter. It brings year-based sub
 - `frontend/` — Vite + React dashboard. Deploy this directory as the Vercel project root.
 - `backend/` — Spring Boot REST API (Java 17+, Maven). Run or host this separately and point the frontend at its URL.
 
-The dashboard currently uses a sample computer-science curriculum for second, third, and fourth year, with five subjects in each. Replace it with the college syllabus when available. The API has starter read endpoints backed by in-memory sample records; signup totals are examples and no database or authentication is configured yet. The faculty upload control is a UI preview that records filenames for the current session; durable private file sharing needs backend storage and role-based access.
+The dashboard currently uses a sample computer-science curriculum for second, third, and fourth year, with five subjects in each. Replace it with the college syllabus when available. Student registration should use name, normal email, and college roll number. Faculty and assistant professor registrations require admin approval. The API has starter read endpoints backed by in-memory sample records; signup totals are examples and no database or authentication is configured yet. The faculty upload control is a UI preview that records filenames for the current session; durable private file sharing needs backend storage and role-based access.
 
 ## Run locally
 
