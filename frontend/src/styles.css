@@ -559,3 +559,81 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
   .branch-note { font-size: 11px; }
 }
 
+.reminder-section .section-heading { align-items: flex-end; }
+.reminder-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.reminder-list li {
+  display: flex; align-items: center; gap: 13px; min-width: 0; padding: 12px 14px;
+  border: 1px solid #203650; border-radius: 6px; background: #0a1730;
+}
+.reminder-date {
+  display: grid; place-items: center; flex: none; min-width: 55px; min-height: 42px;
+  color: #dce7ed; border: 1px solid #35536e; border-radius: 5px; background: #10233f;
+  font: 600 12px Manrope, sans-serif;
+}
+.reminder-copy { display: grid; flex: 1; gap: 4px; min-width: 0; }
+.reminder-copy b { overflow: hidden; color: #e7eff3; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.reminder-copy small { color: #94a8b8; font-size: 10px; line-height: 1.4; }
+.reminder-count { flex: none; padding: 6px 8px; color: #bdced9; border: 1px solid #314d66; border-radius: 20px; background: #0d1f37; font-size: 10px; }
+.reminder-count.soon { color: #e0e9ed; border-color: #557084; background: #1b344a; }
+.schedule-panel { overflow: hidden; border: 1px solid #203650; border-radius: 7px; background: #0a1730; }
+.schedule-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 20px 22px; border-bottom: 1px solid #203650; }
+.schedule-panel-heading h2 { margin-top: 7px; color: #eaf1f6; font: 600 18px Manrope, sans-serif; }
+.schedule-panel-heading>span { color: #aabcc8; font-size: 11px; }
+.schedule-list { display: grid; margin: 0; padding: 0 22px; list-style: none; }
+.schedule-list>li { display: flex; align-items: center; gap: 17px; min-width: 0; padding: 17px 0; border-bottom: 1px solid #1b3049; }
+.schedule-list>li:last-child { border-bottom: 0; }
+.schedule-date { display: grid; place-items: center; flex: none; width: 55px; height: 62px; border: 1px solid #38556f; border-radius: 6px; background: #112843; }
+.schedule-date b { align-self: end; color: #edf3f6; font: 600 21px Manrope, sans-serif; }
+.schedule-date span { align-self: start; color: #a5bac8; font: 10px 'DM Mono', monospace; text-transform: uppercase; }
+.schedule-details { flex: 1; min-width: 0; }
+.schedule-details h3 { margin-top: 5px; color: #e8f0f4; font: 600 14px Manrope, sans-serif; }
+.schedule-details p { margin-top: 5px; color: #a3b4c1; font-size: 11px; line-height: 1.5; }
+.schedule-details p span { padding: 0 3px; color: #71899d; }
+.schedule-details>small { display: block; margin-top: 5px; color: #91a6b6; font-size: 10px; line-height: 1.5; }
+.schedule-footnote { margin-top: 13px; color: #94a6b6; font-size: 11px; line-height: 1.6; }
+.progress-list { display: grid; gap: 12px; }
+.progress-explainer { padding: 12px 14px; color: #adbfcc; border: 1px solid #28425c; border-radius: 6px; background: #0b1a31; font-size: 11px; line-height: 1.6; }
+.progress-experiment { overflow: hidden; border: 1px solid #203650; border-radius: 7px; background: #0a1730; }
+.progress-experiment-heading { padding: 15px 17px; border-bottom: 1px solid #1b3049; }
+.progress-experiment-heading h2 { margin-top: 5px; color: #e9f0f4; font: 600 14px Manrope, sans-serif; line-height: 1.5; }
+.student-progress-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 17px; }
+.progress-statuses { display: flex; flex-wrap: wrap; gap: 10px 20px; }
+.progress-statuses>span { display: grid; gap: 4px; color: #90a5b5; font-size: 10px; }
+.progress-statuses b { color: #dbe6ec; font-size: 11px; font-weight: 500; }
+.progress-tag { display: inline-flex; align-items: center; gap: 5px; padding: 6px 9px; color: #cbd8df; border: 1px solid #3a5268; border-radius: 18px; background: #13253b; font-size: 10px; white-space: nowrap; }
+.progress-tag.verified { color: #d9e8e8; border-color: #4b6a70; background: #17323a; }
+.roster-list { display: grid; padding: 0 17px; }
+.roster-row { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 11px 0; border-bottom: 1px solid #1b3049; }
+.roster-row:last-child { border-bottom: 0; }
+.roster-person { display: grid; flex: 1; gap: 4px; min-width: 0; }
+.roster-person b { overflow: hidden; color: #e1ebf0; font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.roster-person small { color: #92a7b7; font-size: 10px; line-height: 1.4; }
+.roster-row select { min-height: 34px; max-width: 145px; padding: 0 7px; color: #dce7ed; border: 1px solid #34506a; border-radius: 5px; background: #0c1b31; font: 10px 'DM Sans', sans-serif; }
+.roster-row .quiet-button { min-height: 34px; }
+@media (max-width: 740px) {
+  .reminder-section .section-heading { align-items: flex-start; }
+  .reminder-list li { gap: 8px; padding: 10px; }
+  .reminder-date { min-width: 48px; min-height: 40px; font-size: 11px; }
+  .reminder-copy b { font-size: 11px; }
+  .reminder-copy small { font-size: 9px; }
+  .reminder-count { padding: 5px 6px; font-size: 9px; }
+  .schedule-panel-heading { padding: 15px 13px; }
+  .schedule-list { padding: 0 13px; }
+  .schedule-list>li { align-items: flex-start; flex-wrap: wrap; gap: 10px; padding: 13px 0; }
+  .schedule-date { width: 47px; height: 55px; }
+  .schedule-date b { font-size: 18px; }
+  .schedule-details { flex-basis: calc(100% - 60px); }
+  .schedule-list .reminder-count { margin-left: 57px; }
+  .schedule-details h3 { font-size: 13px; }
+  .schedule-details p { font-size: 10px; }
+  .student-progress-row { align-items: flex-start; flex-direction: column; padding: 12px 13px; }
+  .progress-experiment-heading { padding: 13px; }
+  .roster-list { padding: 0 12px; }
+  .roster-row { align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+  .roster-person { flex: 1 0 calc(100% - 4px); }
+  .roster-row select { flex: 1; max-width: none; min-height: 38px; font-size: 12px; }
+  .roster-row .quiet-button { min-height: 38px; }
+  .nav-list { justify-content: flex-start; overflow-x: auto; scrollbar-width: thin; }
+  .nav-item { flex: 1 0 58px; min-width: 58px; }
+}
+
