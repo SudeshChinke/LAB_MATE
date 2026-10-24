@@ -346,6 +346,7 @@ function App() {
   const [chatPrompt, setChatPrompt] = React.useState('');
   const [chatFile, setChatFile] = React.useState(null);
   const [chatBusy, setChatBusy] = React.useState(false);
+  const [chatConfigured, setChatConfigured] = React.useState(null);
   const [chatError, setChatError] = React.useState('');
   const [chatMessage, setChatMessage] = React.useState('');
   const [settingLargeText, setSettingLargeText] = React.useState(() => localStorage.getItem('labmate-large-text') === 'true');
@@ -608,6 +609,15 @@ function App() {
       });
     return () => { mounted = false; };
   }, [activeChatId, activePage]);
+
+  React.useEffect(() => {
+    if (activePage !== 'chat') return undefined;
+    let mounted = true;
+    fetch('/api/chat').then(response => response.json()).then(result => {
+      if (mounted) setChatConfigured(Boolean(result.configured));
+    }).catch(() => { if (mounted) setChatConfigured(false); });
+    return () => { mounted = false; };
+  }, [activePage]);
 
   React.useEffect(() => {
     if (!supabase || !session || !profile || activePage !== 'progress' || !canManage) {
@@ -1362,6 +1372,7 @@ function App() {
 
       {activePage === 'chat' && <section className="chat-page">
         <section className="page-heading"><div><div className="eyebrow">LABMATE <span>·</span> GEMINI</div><h1>Study assistant<span className="heading-period">.</span></h1><p>Ask about concepts, experiment steps, or attach a small study file.</p></div><button className="upload-button" onClick={createChatSession} disabled={!profile || chatBusy}><Icon name="plus" size={15} />New chat</button></section>
+        {chatConfigured === false && <div className="chat-setup-notice" role="status"><b>Gemini needs one setup step.</b><span>Add <code>GEMINI_API_KEY</code> in Vercel → Project Settings → Environment Variables, then redeploy. The key stays on the server.</span></div>}
         {!profile && <p className="empty-list">Sign in to save chats and use the study assistant.</p>}
         {profile && <div className="chat-layout">
           <aside className="chat-sidebar"><div className="chat-sidebar-heading"><b>Saved chats</b><span>{chatSessions.length}</span></div>
@@ -1379,7 +1390,7 @@ function App() {
             <form className="chat-composer" onSubmit={sendChatMessage}>
               {chatFile && <div className="chat-file-chip">{chatFile.name}<button type="button" aria-label="Remove attachment" onClick={() => setChatFile(null)}>×</button></div>}
               <textarea value={chatPrompt} onChange={event => setChatPrompt(event.target.value)} rows="3" maxLength="16000" placeholder="Ask a question about your studies…" aria-label="Your study question" disabled={!activeChatId && chatSessions.length > 0 && chatBusy} />
-              <div className="chat-composer-actions"><label className="chat-attach">Attach file<input type="file" accept="image/png,image/jpeg,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/wav,audio/webm,audio/ogg,audio/aac,audio/flac,video/mp4,video/webm,video/quicktime,video/mpeg" onChange={event => setChatFile(event.target.files?.[0] || null)} /></label><small>PDF, image, audio, or video · up to 2.5 MB</small><button className="upload-button" disabled={chatBusy || (!chatPrompt.trim() && !chatFile)}>{chatBusy ? 'Sending…' : 'Send'}</button></div>
+              <div className="chat-composer-actions"><label className="chat-attach">Attach file<input type="file" accept="image/png,image/jpeg,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/wav,audio/webm,audio/ogg,audio/aac,audio/flac,video/mp4,video/webm,video/quicktime,video/mpeg" onChange={event => setChatFile(event.target.files?.[0] || null)} /></label><small>PDF, image, audio, or video · up to 2.5 MB</small><button className="upload-button" disabled={chatBusy || chatConfigured !== true || (!chatPrompt.trim() && !chatFile)}>{chatBusy ? 'Sending…' : 'Send'}</button></div>
             </form>
             <p className="chat-privacy-note">Gemini free-tier requests may be used by Google to improve its products. Do not attach sensitive personal information.</p>
           </section>

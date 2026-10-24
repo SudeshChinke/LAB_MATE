@@ -3,14 +3,18 @@ const MAX_HISTORY_ITEMS = 12;
 
 export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store');
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+  if (request.method === 'GET') {
+    return response.status(200).json({ configured: Boolean(geminiKey && supabaseUrl && supabaseKey) });
+  }
   if (request.method !== 'POST') {
     response.setHeader('Allow', 'POST');
     return response.status(405).json({ error: 'Use POST to send a message.' });
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY;
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   if (!geminiKey || !supabaseUrl || !supabaseKey) {
     return response.status(503).json({ error: 'The study assistant is not configured yet. Ask the LabMate administrator to add the Gemini API key in Vercel.' });
   }

@@ -34,7 +34,7 @@ button { color: inherit; }
   color: #9caebe; font: 10px 'DM Mono', monospace; letter-spacing: .9px;
 }
 .workspace-label { padding: 0 12px 12px; }
-.college-select { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 9px; color: #edf3f7; text-align: left; border: 1px solid #233951; border-radius: 7px; background: #0b1a31; cursor: pointer; }
+.college-select { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 9px; color: #edf3f7; text-align: left; border: 1px solid #233951; border-radius: 7px; background: #0b1a31; cursor: default; }
 .college-avatar, .profile-avatar { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 6px; background: #1a3f75; color: #d9e7f0; font: 500 11px 'DM Mono', monospace; }
 .college-select>span:nth-child(2), .profile>span { display: grid; flex: 1; gap: 3px; }
 .college-select b, .profile b { font-size: 12px; font-weight: 600; }
@@ -449,12 +449,6 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
   .profile-facts dd { font-size: 13px; }
 }
 
-.home-button {
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  min-height: 38px; padding: 0 11px; color: #dfeaf0; border: 1px solid #29435f;
-  border-radius: 5px; background: #0d1d34; font-size: 11px; text-decoration: none;
-}
-.home-button:hover { background: #142d4b; }
 .dashboard-context {
   display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding: 11px 14px;
   border: 1px solid #203650; border-radius: 6px; background: #0a1730;
@@ -500,7 +494,6 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
 .page-detail-panel .experiment-item small { font-size: 11px; }
 .page-detail-panel .materials-section { margin: 0; padding: 0; border: 0; }
 @media (max-width: 740px) {
-  .home-button { min-height: 36px; padding: 0 9px; font-size: 12px; }
   .dashboard-context { align-items: flex-start; flex-wrap: wrap; gap: 8px 10px; }
   .dashboard-context>.section-kicker { flex: 1 0 100%; }
   .dashboard-context .semester-switch { flex: 1 0 100%; margin: 2px 0 0; }
@@ -686,6 +679,9 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
 .chat-file-chip { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: fit-content; max-width: 100%; padding: 6px 8px; color: #dbe6ec; border: 1px solid #34516a; border-radius: 4px; font-size: 11px; }
 .chat-file-chip button { color: #b8c8d2; border: 0; background: transparent; cursor: pointer; }
 .chat-privacy-note { margin-top: 8px; color: #8499aa; font-size: 10px; line-height: 1.5; }
+.chat-setup-notice { display: grid; gap: 5px; margin: -8px 0 14px; padding: 12px 14px; color: #dbe6ec; border: 1px solid #45617c; border-radius: 6px; background: #10233f; font-size: 12px; line-height: 1.5; }
+.chat-setup-notice span { color: #aabcc9; }
+.chat-setup-notice code { color: #e3edf2; font-size: 11px; }
 html.large-text .nav-item, html.large-text .quiet-button, html.large-text .auth-top-button, html.large-text .upload-button,
 html.large-text .page-heading p, html.large-text .subject-name b, html.large-text .settings-card p, html.large-text .chat-bubble p,
 html.large-text .experiment-check, html.large-text .file-access, html.large-text .file-delete, html.large-text .schedule-details p { font-size: 1.1em; }
