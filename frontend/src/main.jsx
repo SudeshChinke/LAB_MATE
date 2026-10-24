@@ -105,6 +105,11 @@ function App() {
         <article className="metric-card"><div className="metric-top"><span>{year.toUpperCase()} SUBJECTS</span><Icon name="book" size={17} /></div><div className="metric-value">05<span className="metric-unit"> subjects</span></div><div className="metric-foot">Each includes practical work</div></article>
       </section>
 
+      <section className="access-rules" aria-label="Signup and approval rules">
+        <article className="access-rule"><span className="access-icon"><Icon name="people" size={17} /></span><div><div className="section-kicker">STUDENT ACCESS</div><h2>Students can sign up</h2><p>Use their name, normal email address, and college roll number.</p></div><span className="rule-status open">SELF SIGNUP</span></article>
+        <article className="access-rule"><span className="access-icon"><Icon name="book" size={17} /></span><div><div className="section-kicker">FACULTY ACCESS</div><h2>Admin approval required</h2><p>Faculty and assistant professors request access; an admin approves them.</p></div><span className="rule-status review">REVIEW</span></article>
+      </section>
+
       <div className="section-heading" id="subjects"><div><div className="section-kicker">CURRICULUM</div><h2>{year} subjects</h2><p>Choose a subject to see its practicals and shared material.</p></div><span className="curriculum-tag">Demo curriculum · update to your syllabus</span></div>
       <div className="workspace-grid">
         <section className="subject-panel" aria-label="Subject list">
