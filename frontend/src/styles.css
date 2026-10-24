@@ -186,6 +186,53 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
 .account-state-card p { color: #a1b1bf; font-size: 11px; line-height: 1.6; }
 .account-state-card .auth-submit { margin-top: 2px; }
 .account-state-card .account-error { color: #e0bdc4; }
+@media (min-width: 741px) {
+  .main-content { max-width: none; padding-right: clamp(28px, 4vw, 72px); padding-left: clamp(28px, 4vw, 72px); }
+  .topbar { height: 72px; }
+  .breadcrumbs { font-size: 13px; }
+  .role-picker, .quiet-button, .auth-top-button { min-height: 40px; font-size: 12px; }
+  .role-picker select { font-size: 13px; }
+  .page-heading { padding-top: 43px; padding-bottom: 30px; }
+  h1 { font-size: 35px; }
+  .page-heading p { font-size: 14px; }
+  .year-switch button { padding: 10px 14px; font-size: 12px; }
+  .metrics-grid { gap: 16px; }
+  .metric-card { min-height: 136px; padding: 20px 22px 17px; }
+  .metric-top { font-size: 11px; }
+  .metric-value { font-size: 31px; }
+  .metric-unit { font-size: 13px; }
+  .metric-foot { font-size: 12px; }
+  .access-rules { gap: 14px; margin-top: 16px; }
+  .access-rule { gap: 14px; padding: 17px 18px; }
+  .access-rule h2 { font-size: 13px; }
+  .access-rule p { font-size: 11px; }
+  .section-heading { margin-top: 36px; margin-bottom: 18px; }
+  .section-heading h2, .detail-heading h2 { font-size: 20px; }
+  .section-heading p { font-size: 12px; }
+  .curriculum-tag { padding: 8px 11px; font-size: 11px; }
+  .workspace-grid { gap: 18px; }
+  .subject-panel { padding-right: 22px; padding-left: 22px; }
+  .panel-topline { padding-top: 17px; padding-bottom: 13px; font-size: 10px; }
+  .subject-row { grid-template-columns: 68px minmax(0, 1fr) 82px 18px; gap: 13px; min-height: 76px; padding: 12px 9px; }
+  .subject-row.selected { margin-right: -22px; margin-left: -22px; width: calc(100% + 44px); padding-right: 30px; padding-left: 30px; }
+  .subject-code { font-size: 12px; }
+  .subject-name b { font-size: 14px; }
+  .subject-name small, .practical-count small { font-size: 11px; }
+  .practical-count { font-size: 14px; }
+  .subject-footer { min-height: 50px; font-size: 11px; }
+  .detail-panel { padding: 25px 25px 0; }
+  .detail-heading p { font-size: 12px; }
+  .detail-stats { margin-top: 20px; margin-bottom: 22px; }
+  .detail-stats>div { padding: 13px 15px; }
+  .detail-stats b { font-size: 19px; }
+  .detail-stats span, .upload-hint, .file-access { font-size: 11px; }
+  .material-heading h3 { font-size: 14px; }
+  .upload-button { padding: 9px 11px; font-size: 11px; }
+  .material-list li { min-height: 54px; }
+  .file-name { font-size: 12px; }
+  .file-name small { font-size: 10px; }
+  .detail-bottom, .page-footer { font-size: 11px; }
+}
 @media (max-width: 1120px) {
   .main-content { padding-right: 28px; padding-left: 28px; }
   .workspace-grid { grid-template-columns: 1fr; }
