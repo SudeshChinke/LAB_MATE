@@ -147,6 +147,7 @@ function AuthDialog({ mode, setMode, onClose }) {
           full_name: String(form.get('full_name') || '').trim(),
           account_type: accountType,
           roll_number: accountType === 'student' ? String(form.get('roll_number') || '').trim() : null,
+          branch: accountType === 'student' ? String(form.get('branch') || '') : null,
           academic_year: accountType === 'student' ? Number(form.get('academic_year')) : null,
         };
         const { data, error: signUpError } = await supabase.auth.signUp({
@@ -189,7 +190,8 @@ function AuthDialog({ mode, setMode, onClose }) {
   return <div className="dialog-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && onClose()}>
     <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       <button className="dialog-close" onClick={onClose} aria-label="Close account dialog">×</button>
-      <div className="section-kicker">LABMATE ACCOUNT</div>
+      <div className="auth-brand"><span className="auth-brand-mark"><Icon name="flask" size={19} /></span><span><b>LabMate</b><small>COLLEGE LAB SPACE</small></span></div>
+      <div className="section-kicker auth-kicker">{mode === 'signup' ? 'GET STARTED' : mode === 'signin' ? 'YOUR ACCOUNT' : 'ACCOUNT HELP'}</div>
       <h2 id="auth-title">{title}</h2>
       <p className="auth-intro">{intro}</p>
       {!supabaseConfigured && <div className="setup-notice">Account access is currently unavailable. Please try again later.</div>}
@@ -217,10 +219,14 @@ function AuthDialog({ mode, setMode, onClose }) {
             <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(current => !current)}>{showPassword ? 'Hide' : 'Show'}</button>
           </span>
         </label>}
-        {mode === 'signup' && accountType === 'student' && <div className="student-fields">
-          <label>College roll number<input name="roll_number" autoComplete="off" required maxLength="40" /></label>
-          <label>Academic year<select name="academic_year" defaultValue="2"><option value="2">2nd year</option><option value="3">3rd year</option><option value="4">4th year</option></select></label>
-        </div>}
+        {mode === 'signup' && accountType === 'student' && <>
+          <div className="student-fields">
+            <label className="student-branch">Branch<select name="branch" defaultValue="ENTC" required><option value="ENTC">Electronics &amp; Telecommunication (E&amp;TC)</option></select></label>
+            <label>College roll number<input name="roll_number" autoComplete="off" required maxLength="40" /></label>
+            <label>Current year<select name="academic_year" defaultValue="2"><option value="2">2nd year</option><option value="3">3rd year</option><option value="4">4th year</option></select></label>
+          </div>
+          <p className="branch-note">Your branch and year set which labs, experiments, and materials you can view.</p>
+        </>}
         {mode === 'signup' && accountType !== 'student' && <div className="setup-notice">Faculty access starts as pending and becomes available after admin approval.</div>}
         {message && <div className="form-message success" role="status">{message}</div>}
         {error && <div className="form-message error" role="alert">{error}</div>}
@@ -310,6 +316,10 @@ function App() {
   }, []);
   const pageTitle = { dashboard: 'Dashboard', labs: 'Labs', experiments: 'Experiments', materials: 'Materials', profile: 'Profile' }[activePage];
   const uploadInput = React.useRef(null);
+  const availableYears = Object.keys(years);
+  const visibleYears = profile?.role === 'student'
+    ? availableYears.filter(item => years[item].number === profile.academic_year)
+    : availableYears;
   const yearData = years[year];
   const semesters = Object.keys(yearData.semesters);
   const courses = yearData.semesters[semester] || yearData.semesters[semesters[0]];
@@ -354,7 +364,7 @@ function App() {
     let mounted = true;
     setProfileLoading(true);
     supabase.from('profiles')
-      .select('id,full_name,email,role,account_status,roll_number,academic_year')
+      .select('id,full_name,email,role,account_status,roll_number,academic_year,branch')
       .eq('id', session.user.id)
       .single()
       .then(({ data, error }) => {
@@ -367,19 +377,30 @@ function App() {
   }, [authInitialized, session?.user?.id]);
 
   React.useEffect(() => {
+    if (profile?.role !== 'student') return;
+    const assignedYear = availableYears.find(item => years[item].number === profile.academic_year);
+    if (!assignedYear) return;
+    setYear(assignedYear);
+    const firstSemester = Object.keys(years[assignedYear].semesters)[0];
+    setSemester(firstSemester);
+    const firstCourse = years[assignedYear].semesters[firstSemester][0];
+    setSelectedKey(`${firstCourse.code}::${firstCourse.subject}`);
+  }, [profile?.id, profile?.role, profile?.academic_year]);
+
+  React.useEffect(() => {
     if (!supabase || !session || !profile) {
       setExperiments([]);
       return undefined;
     }
     let mounted = true;
-    supabase.from('labmate_experiments')
+    let query = supabase.from('labmate_experiments')
       .select('*')
       .eq('academic_year', yearData.number)
       .eq('semester', semesterNumber)
       .eq('course_code', selectedCourse.code)
-      .eq('subject_name', selectedCourse.subject)
-      .order('experiment_number', { ascending: true })
-      .then(({ data, error }) => {
+      .eq('subject_name', selectedCourse.subject);
+    if (profile.role === 'student') query = query.eq('branch', profile.branch);
+    query.order('experiment_number', { ascending: true }).then(({ data, error }) => {
         if (!mounted) return;
         setExperiments(data || []);
         setWorkError(error?.message || '');
@@ -393,14 +414,14 @@ function App() {
       return undefined;
     }
     let mounted = true;
-    supabase.from('labmate_files')
+    let query = supabase.from('labmate_files')
       .select('id,experiment_id,original_name,storage_path,content_type,file_size,uploaded_by,created_at')
       .eq('academic_year', yearData.number)
       .eq('semester', semesterNumber)
       .eq('course_code', selectedCourse.code)
-      .eq('subject_name', selectedCourse.subject)
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
+      .eq('subject_name', selectedCourse.subject);
+    if (profile.role === 'student') query = query.eq('branch', profile.branch);
+    query.order('created_at', { ascending: false }).then(({ data, error }) => {
         if (!mounted) return;
         setSharedFiles(data || []);
         if (error) setWorkError(error.message);
@@ -409,6 +430,7 @@ function App() {
   }, [session?.user?.id, profile?.id, yearData.number, semesterNumber, selectedCourse.code]);
 
   const chooseYear = nextYear => {
+    if (profile?.role === 'student' && years[nextYear].number !== profile.academic_year) return;
     setYear(nextYear);
     const firstSemester = Object.keys(years[nextYear].semesters)[0];
     setSemester(firstSemester);
@@ -429,6 +451,7 @@ function App() {
     setWorkMessage('');
     const experimentNumber = (experiments.at(-1)?.experiment_number || 0) + 1;
     const { data, error } = await supabase.from('labmate_experiments').insert({
+      branch: profile.branch || 'ENTC',
       academic_year: yearData.number,
       semester: semesterNumber,
       course_code: selectedCourse.code,
@@ -505,7 +528,7 @@ function App() {
     setWorkMessage('');
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const safeSubject = selectedCourse.subject.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const storagePath = `${session.user.id}/${yearData.number}/${semesterNumber}/${selectedCourse.code}/${safeSubject}/${crypto.randomUUID()}-${safeName}`;
+    const storagePath = `${session.user.id}/${profile.branch || 'ENTC'}/${yearData.number}/${semesterNumber}/${selectedCourse.code}/${safeSubject}/${crypto.randomUUID()}-${safeName}`;
     const { error: storageError } = await supabase.storage.from('labmate-materials').upload(storagePath, file, {
       contentType,
       upsert: false,
@@ -517,6 +540,7 @@ function App() {
     }
     const { data, error } = await supabase.from('labmate_files').insert({
       uploaded_by: session.user.id,
+      branch: profile.branch || 'ENTC',
       academic_year: yearData.number,
       semester: semesterNumber,
       course_code: selectedCourse.code,
@@ -571,7 +595,7 @@ function App() {
         {profile && <a className={activePage === 'profile' ? 'nav-item active' : 'nav-item'} href="#profile"><Icon name="people" />Profile</a>}
       </nav>
       <div className="sidebar-note"><span className="note-mark" />Only syllabus lab and practical courses appear here.</div>
-      <div className="sidebar-bottom"><span className="year-label">ACADEMIC YEARS</span><div className="year-list">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'year-link current' : 'year-link'}>{item}<span>{Object.keys(years[item].semesters).length}</span></button>)}</div><div className="profile"><div className="profile-avatar">{workspaceRole === 'Faculty' ? 'FC' : workspaceRole === 'Admin' ? 'AD' : profile ? 'ST' : '—'}</div><span><b>{profile?.full_name || 'Not signed in'}</b><small>{profile ? workspaceRole : 'Sign in for files and schedules'}</small></span></div></div>
+      <div className="sidebar-bottom"><span className="year-label">ACADEMIC YEARS</span><div className="year-list">{visibleYears.map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'year-link current' : 'year-link'}>{item}<span>{Object.keys(years[item].semesters).length}</span></button>)}</div><div className="profile"><div className="profile-avatar">{workspaceRole === 'Faculty' ? 'FC' : workspaceRole === 'Admin' ? 'AD' : profile ? 'ST' : '—'}</div><span><b>{profile?.full_name || 'Not signed in'}</b><small>{profile ? workspaceRole : 'Sign in for files and schedules'}</small></span></div></div>
     </aside>
 
     <main className="main-content">
@@ -586,7 +610,7 @@ function App() {
       {activePage === 'dashboard' && <>
         <section className="page-heading dashboard-heading">
           <div><div className="eyebrow">SPPU E&amp;TC <span>·</span> LABMATE</div><h1>Dashboard<span className="heading-period">.</span></h1><p>{profile ? 'Welcome, ' + profile.full_name + '. Pick up where you left off.' : 'Your labs, experiments, and shared course materials in one place.'}</p></div>
-          <div className="year-switch" role="group" aria-label="Choose academic year">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'selected' : ''}>{item}</button>)}</div>
+          <div className="year-switch" role="group" aria-label="Choose academic year">{visibleYears.map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'selected' : ''}>{item}</button>)}</div>
         </section>
         <div className="dashboard-context"><span className="section-kicker">CURRENT VIEW</span><b>{year} · {semester}</b><div className="semester-switch" role="group" aria-label="Choose semester">{semesters.map(item => <button key={item} onClick={() => chooseSemester(item)} className={semester === item ? 'selected' : ''}>{item}</button>)}</div></div>
         <section className="metrics-grid" aria-label="Semester overview">
@@ -609,7 +633,7 @@ function App() {
       {activePage === 'labs' && <>
         <section className="page-heading">
           <div><div className="eyebrow">SPPU E&amp;TC <span>·</span> CURRICULUM</div><h1>Labs<span className="heading-period">.</span></h1><p>Choose an academic year, semester, and lab course.</p></div>
-          <div className="year-switch" role="group" aria-label="Choose academic year">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'selected' : ''}>{item}</button>)}</div>
+          <div className="year-switch" role="group" aria-label="Choose academic year">{visibleYears.map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'selected' : ''}>{item}</button>)}</div>
         </section>
         <div className="section-heading"><div><div className="section-kicker">LAB COURSES</div><h2>{year} · {semester}</h2><p>Select a lab to view its experiments or materials.</p></div><a className="curriculum-tag" href={yearData.source} target="_blank" rel="noreferrer">{yearData.pattern} · source ↗</a></div>
         <div className="semester-switch" role="group" aria-label="Choose semester">{semesters.map(item => <button key={item} onClick={() => chooseSemester(item)} className={semester === item ? 'selected' : ''}>{item}</button>)}</div>
@@ -688,6 +712,7 @@ function App() {
               <div><dt>Account type</dt><dd>{workspaceRole}</dd></div>
               <div><dt>Email</dt><dd>{profile.email}</dd></div>
               {profile.role === 'student' && <>
+                <div><dt>Branch</dt><dd>Electronics &amp; Telecommunication (E&amp;TC)</dd></div>
                 <div><dt>College roll number</dt><dd>{profile.roll_number}</dd></div>
                 <div><dt>Academic year</dt><dd>{profile.academic_year}{profile.academic_year === 2 ? 'nd' : profile.academic_year === 3 ? 'rd' : 'th'} year</dd></div>
               </>}
@@ -703,3 +728,4 @@ function App() {
 }
 
 createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);
+
