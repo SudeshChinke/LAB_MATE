@@ -107,6 +107,14 @@ function AuthDialog({ mode, setMode, onClose }) {
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
   const [busy, setBusy] = React.useState(false);
+  const [showPassword, setShowPassword] = React.useState(false);
+
+  const changeMode = nextMode => {
+    setMode(nextMode);
+    setMessage('');
+    setError('');
+    setShowPassword(false);
+  };
 
   const handleSubmit = async event => {
     event.preventDefault();
@@ -122,7 +130,19 @@ function AuthDialog({ mode, setMode, onClose }) {
     const password = String(form.get('password') || '');
 
     try {
-      if (mode === 'signup') {
+      if (mode === 'forgot') {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin,
+        });
+        if (resetError) throw resetError;
+        setMessage('If a LabMate account uses that email, a password reset link will be sent.');
+      } else if (mode === 'recovery') {
+        const confirmation = String(form.get('confirm_password') || '');
+        if (password !== confirmation) throw new Error('The passwords do not match.');
+        const { error: updateError } = await supabase.auth.updateUser({ password });
+        if (updateError) throw updateError;
+        setMessage('Your password has been updated. You can close this window.');
+      } else if (mode === 'signup') {
         const metadata = {
           full_name: String(form.get('full_name') || '').trim(),
           account_type: accountType,
@@ -157,12 +177,21 @@ function AuthDialog({ mode, setMode, onClose }) {
     }
   };
 
+  const title = mode === 'signup' ? 'Create your account'
+    : mode === 'forgot' ? 'Reset your password'
+      : mode === 'recovery' ? 'Choose a new password'
+        : 'Welcome back';
+  const intro = mode === 'signup' ? 'Use your regular email address. We’ll send a verification link.'
+    : mode === 'forgot' ? 'Enter your email and we’ll send a password reset link if there is an account for it.'
+      : mode === 'recovery' ? 'Choose a new password for your LabMate account.'
+        : 'Sign in with your verified email address.';
+
   return <div className="dialog-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && onClose()}>
     <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       <button className="dialog-close" onClick={onClose} aria-label="Close account dialog">×</button>
       <div className="section-kicker">LABMATE ACCOUNT</div>
-      <h2 id="auth-title">{mode === 'signup' ? 'Create your account' : 'Welcome back'}</h2>
-      <p className="auth-intro">{mode === 'signup' ? 'Use your regular email address. We’ll send a verification link.' : 'Sign in with your verified email address.'}</p>
+      <h2 id="auth-title">{title}</h2>
+      <p className="auth-intro">{intro}</p>
       {!supabaseConfigured && <div className="setup-notice">Account access is currently unavailable. Please try again later.</div>}
       <form className="auth-form" onSubmit={handleSubmit}>
         {mode === 'signup' && <>
@@ -176,7 +205,18 @@ function AuthDialog({ mode, setMode, onClose }) {
           <label>Full name<input name="full_name" autoComplete="name" required minLength="2" maxLength="120" /></label>
         </>}
         <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
-        <label>Password<input name="password" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} required minLength="8" /></label>
+        {['signup', 'signin', 'recovery'].includes(mode) && <label>{mode === 'recovery' ? 'New password' : 'Password'}
+          <span className="password-field">
+            <input name="password" type={showPassword ? 'text' : 'password'} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} required minLength="8" />
+            <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(current => !current)}>{showPassword ? 'Hide' : 'Show'}</button>
+          </span>
+        </label>}
+        {mode === 'recovery' && <label>Confirm new password
+          <span className="password-field">
+            <input name="confirm_password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength="8" />
+            <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(current => !current)}>{showPassword ? 'Hide' : 'Show'}</button>
+          </span>
+        </label>}
         {mode === 'signup' && accountType === 'student' && <div className="student-fields">
           <label>College roll number<input name="roll_number" autoComplete="off" required maxLength="40" /></label>
           <label>Academic year<select name="academic_year" defaultValue="2"><option value="2">2nd year</option><option value="3">3rd year</option><option value="4">4th year</option></select></label>
@@ -184,9 +224,12 @@ function AuthDialog({ mode, setMode, onClose }) {
         {mode === 'signup' && accountType !== 'student' && <div className="setup-notice">Faculty access starts as pending and becomes available after admin approval.</div>}
         {message && <div className="form-message success" role="status">{message}</div>}
         {error && <div className="form-message error" role="alert">{error}</div>}
-        <button className="auth-submit" type="submit" disabled={busy || !supabaseConfigured}>{busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}</button>
+        <button className="auth-submit" type="submit" disabled={busy || !supabaseConfigured}>{busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : mode === 'forgot' ? 'Send reset link' : mode === 'recovery' ? 'Update password' : 'Sign in'}</button>
       </form>
-      <div className="auth-switch">{mode === 'signup' ? 'Already registered?' : 'New to LabMate?'} <button onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setMessage(''); setError(''); }}>{mode === 'signup' ? 'Sign in' : 'Create an account'}</button></div>
+      {mode === 'signin' && <div className="auth-forgot"><button onClick={() => changeMode('forgot')}>Forgot your password?</button></div>}
+      {mode === 'recovery'
+        ? <div className="auth-switch"><button onClick={onClose}>Return to LabMate</button></div>
+        : <div className="auth-switch">{mode === 'forgot' ? 'Remembered your password?' : mode === 'signup' ? 'Already registered?' : 'New to LabMate?'} <button onClick={() => changeMode(mode === 'signup' ? 'signin' : mode === 'signin' ? 'signup' : 'signin')}>{mode === 'signup' ? 'Sign in' : mode === 'signin' ? 'Create an account' : 'Back to sign in'}</button></div>}
     </section>
   </div>;
 }
@@ -258,7 +301,7 @@ function App() {
   const courses = yearData.semesters[semester] || yearData.semesters[semesters[0]];
   const selectedCourse = courses.find(course => `${course.code}::${course.subject}` === selectedKey) || courses[0];
   const semesterNumber = ({ I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8 })[semester.split(/\s+/).at(-1)] || null;
-  const workspaceRole = profile?.role === 'student' ? 'Student' : profile?.role === 'admin' ? 'Admin' : profile ? 'Faculty' : '';
+  const workspaceRole = profile?.role === 'student' ? 'Student' : profile?.role === 'assistant_professor' ? 'Assistant Professor' : profile?.role === 'admin' ? 'Admin' : profile ? 'Faculty' : '';
   const canManage = Boolean(profile && ['faculty', 'assistant_professor', 'admin'].includes(profile.role) && ['active', 'approved'].includes(profile.account_status));
   const canUpload = Boolean(profile && ['active', 'approved'].includes(profile.account_status));
 
@@ -274,10 +317,14 @@ function App() {
       setSession(data.session);
       setAuthInitialized(true);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
       setAuthInitialized(true);
       if (!nextSession) setProfile(null);
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthMode('recovery');
+        setAuthOpen(true);
+      }
       setProfileError('');
     });
     return () => { mounted = false; subscription.unsubscribe(); };
@@ -506,6 +553,7 @@ function App() {
         <a className="nav-item active" href="#subjects"><Icon name="flask" />Labs</a>
         <a className="nav-item" href="#experiments"><Icon name="book" />Experiments</a>
         <a className="nav-item" href="#materials"><Icon name="file" />Materials</a>
+        {profile && <a className="nav-item" href="#profile"><Icon name="people" />Profile</a>}
       </nav>
       <div className="sidebar-note"><span className="note-mark" />Only syllabus lab and practical courses appear here.</div>
       <div className="sidebar-bottom"><span className="year-label">ACADEMIC YEARS</span><div className="year-list">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'year-link current' : 'year-link'}>{item}<span>{Object.keys(years[item].semesters).length}</span></button>)}</div><div className="profile"><div className="profile-avatar">{workspaceRole === 'Faculty' ? 'FC' : workspaceRole === 'Admin' ? 'AD' : profile ? 'ST' : '—'}</div><span><b>{profile?.full_name || 'Not signed in'}</b><small>{profile ? workspaceRole : 'Sign in for files and schedules'}</small></span></div></div>
@@ -570,6 +618,26 @@ function App() {
           </section>
         </section>
       </div>
+      {profile && <section className="profile-section" id="profile" aria-labelledby="profile-title">
+        <div className="profile-section-heading">
+          <div><div className="section-kicker">MY ACCOUNT</div><h2 id="profile-title">Profile</h2><p>Your LabMate account details.</p></div>
+        </div>
+        <div className="profile-card">
+          <div className="profile-identity">
+            <span className="profile-avatar-large" aria-hidden="true">{(profile.full_name || 'LabMate').split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()}</span>
+            <div><h3>{profile.full_name}</h3><p>{profile.email}</p></div>
+            <span className="profile-status">{profile.account_status === 'active' ? 'Active' : profile.account_status === 'approved' ? 'Approved' : profile.account_status === 'pending' ? 'Pending approval' : 'Not approved'}</span>
+          </div>
+          <dl className="profile-facts">
+            <div><dt>Account type</dt><dd>{workspaceRole}</dd></div>
+            <div><dt>Email</dt><dd>{profile.email}</dd></div>
+            {profile.role === 'student' && <>
+              <div><dt>College roll number</dt><dd>{profile.roll_number}</dd></div>
+              <div><dt>Academic year</dt><dd>{profile.academic_year}{profile.academic_year === 2 ? 'nd' : profile.academic_year === 3 ? 'rd' : 'th'} year</dd></div>
+            </>}
+          </dl>
+        </div>
+      </section>}
       <footer className="page-footer"><span>LabMate <span className="footer-dot">·</span> SPPU E&amp;TC lab workspace.</span><span>{profile ? `Signed in as ${workspaceRole}` : 'Sign in to view experiments and shared files.'}</span></footer>
     </main>
     {authOpen && <AuthDialog mode={authMode} setMode={setAuthMode} onClose={() => setAuthOpen(false)} />}
