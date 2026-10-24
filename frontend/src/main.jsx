@@ -98,6 +98,7 @@ function Icon({ name, size = 18 }) {
     file: <><path d="M13 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10z" /><path d="M13 3v7h7M8 14h8M8 17h6" /></>,
     plus: <><path d="M12 5v14M5 12h14" /></>,
     check: <path d="m5 12 4 4L19 6" />,
+    calendar: <><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M7.5 3v4M16.5 3v4M4 9h16M8 13h2M14 13h2M8 16h2" /></>,
   };
   return <svg {...props}>{paths[name]}</svg>;
 }
@@ -288,6 +289,12 @@ function App() {
   const [semester, setSemester] = React.useState('Semester V');
   const [selectedKey, setSelectedKey] = React.useState('PCC-304::Microcontrollers & Applications');
   const [experiments, setExperiments] = React.useState([]);
+  const [scheduleEntries, setScheduleEntries] = React.useState([]);
+  const [practicalRecords, setPracticalRecords] = React.useState([]);
+  const [studentRoster, setStudentRoster] = React.useState([]);
+  const [progressBusy, setProgressBusy] = React.useState(false);
+  const [progressError, setProgressError] = React.useState('');
+  const [progressMessage, setProgressMessage] = React.useState('');
   const [sharedFiles, setSharedFiles] = React.useState([]);
   const [workMessage, setWorkMessage] = React.useState('');
   const [workError, setWorkError] = React.useState('');
@@ -303,18 +310,18 @@ function App() {
   const [authMode, setAuthMode] = React.useState('signup');
   const [activePage, setActivePage] = React.useState(() => {
     const requestedPage = window.location.hash.slice(1);
-    return requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'profile'].includes(requestedPage) ? requestedPage : 'dashboard';
+    return requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'timetable', 'progress', 'profile'].includes(requestedPage) ? requestedPage : 'dashboard';
   });
   React.useEffect(() => {
     const syncPage = () => {
       const requestedPage = window.location.hash.slice(1);
-      setActivePage(requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'profile'].includes(requestedPage) ? requestedPage : 'dashboard');
+      setActivePage(requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'timetable', 'progress', 'profile'].includes(requestedPage) ? requestedPage : 'dashboard');
       window.scrollTo(0, 0);
     };
     window.addEventListener('hashchange', syncPage);
     return () => window.removeEventListener('hashchange', syncPage);
   }, []);
-  const pageTitle = { dashboard: 'Dashboard', labs: 'Labs', experiments: 'Experiments', materials: 'Materials', profile: 'Profile' }[activePage];
+  const pageTitle = { dashboard: 'Dashboard', labs: 'Labs', experiments: 'Experiments', materials: 'Materials', timetable: 'Timetable', progress: 'Progress', profile: 'Profile' }[activePage];
   const uploadInput = React.useRef(null);
   const availableYears = Object.keys(years);
   const visibleYears = profile?.role === 'student'
@@ -324,10 +331,15 @@ function App() {
   const semesters = Object.keys(yearData.semesters);
   const courses = yearData.semesters[semester] || yearData.semesters[semesters[0]];
   const selectedCourse = courses.find(course => `${course.code}::${course.subject}` === selectedKey) || courses[0];
+  const selectedExperimentIds = experiments.map(item => item.id).join(',');
   const semesterNumber = ({ I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8 })[semester.split(/\s+/).at(-1)] || null;
   const workspaceRole = profile?.role === 'student' ? 'Student' : profile?.role === 'assistant_professor' ? 'Assistant Professor' : profile?.role === 'admin' ? 'Admin' : profile ? 'Faculty' : '';
   const canManage = Boolean(profile && ['faculty', 'assistant_professor', 'admin'].includes(profile.role) && ['active', 'approved'].includes(profile.account_status));
   const canUpload = Boolean(profile && ['active', 'approved'].includes(profile.account_status));
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const upcomingSchedule = scheduleEntries.filter(item => item.scheduled_on >= todayKey);
+  const daysUntil = date => Math.round((new Date(`${date}T12:00:00`).getTime() - new Date(`${todayKey}T12:00:00`).getTime()) / 86400000);
 
   React.useEffect(() => {
     if (!supabase) {
@@ -407,6 +419,61 @@ function App() {
       });
     return () => { mounted = false; };
   }, [session?.user?.id, profile?.id, yearData.number, semesterNumber, selectedCourse.code, selectedCourse.subject]);
+
+  React.useEffect(() => {
+    if (!supabase || !session || !profile) {
+      setScheduleEntries([]);
+      return undefined;
+    }
+    let mounted = true;
+    let query = supabase.from('labmate_experiments')
+      .select('id,branch,academic_year,semester,course_code,lab_course,subject_name,elective_name,experiment_number,title,scheduled_on,notes')
+      .eq('academic_year', yearData.number)
+      .not('scheduled_on', 'is', null)
+      .order('scheduled_on', { ascending: true });
+    if (profile.role === 'student') query = query.eq('branch', profile.branch);
+    query.then(({ data, error }) => {
+      if (!mounted) return;
+      setScheduleEntries(data || []);
+      if (error) setProgressError(error.message);
+    });
+    return () => { mounted = false; };
+  }, [session?.user?.id, profile?.id, profile?.branch, profile?.role, yearData.number]);
+
+  React.useEffect(() => {
+    if (!supabase || !session || !profile || activePage !== 'progress' || !selectedExperimentIds) {
+      setPracticalRecords([]);
+      return undefined;
+    }
+    let mounted = true;
+    supabase.from('labmate_practical_records')
+      .select('id,student_id,experiment_id,attendance_status,attendance_date,completion_status,marked_by,updated_at')
+      .in('experiment_id', selectedExperimentIds.split(','))
+      .order('updated_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!mounted) return;
+        setPracticalRecords(data || []);
+        setProgressError(error?.message || '');
+      });
+    return () => { mounted = false; };
+  }, [session?.user?.id, profile?.id, activePage, selectedExperimentIds]);
+
+  React.useEffect(() => {
+    if (!supabase || !session || !profile || activePage !== 'progress' || !canManage) {
+      setStudentRoster([]);
+      return undefined;
+    }
+    let mounted = true;
+    supabase.rpc('labmate_student_roster', {
+      p_branch: profile.branch || 'ENTC',
+      p_year: yearData.number,
+    }).then(({ data, error }) => {
+      if (!mounted) return;
+      setStudentRoster(data || []);
+      setProgressError(error?.message || '');
+    });
+    return () => { mounted = false; };
+  }, [session?.user?.id, profile?.id, profile?.branch, activePage, canManage, yearData.number]);
 
   React.useEffect(() => {
     if (!supabase || !session || !profile) {
@@ -494,6 +561,61 @@ function App() {
       setWorkMessage('Experiment details and date saved.');
     }
     setSaving(false);
+  };
+
+  const savePracticalCompletion = async (experiment, status = 'submitted', studentId = session?.user?.id) => {
+    if (!supabase || !session?.user?.id || !profile) return;
+    setProgressBusy(true);
+    setProgressError('');
+    setProgressMessage('');
+    const existing = practicalRecords.find(item => item.experiment_id === experiment.id && item.student_id === studentId);
+    const result = existing
+      ? await supabase.from('labmate_practical_records')
+        .update({ completion_status: status, updated_at: new Date().toISOString() })
+        .eq('id', existing.id).select('*').single()
+      : await supabase.from('labmate_practical_records').insert({
+        student_id: studentId,
+        experiment_id: experiment.id,
+        completion_status: status,
+      }).select('*').single();
+    if (result.error) setProgressError(result.error.message);
+    else {
+      setPracticalRecords(current => current.some(item => item.id === result.data.id)
+        ? current.map(item => item.id === result.data.id ? result.data : item)
+        : [...current, result.data]);
+      setProgressMessage(status === 'verified' ? 'Practical completion verified.' : 'Practical marked complete and sent for faculty review.');
+    }
+    setProgressBusy(false);
+  };
+
+  const saveAttendance = async (student, experiment, status) => {
+    if (!supabase || !session?.user?.id || !canManage) return;
+    setProgressBusy(true);
+    setProgressError('');
+    setProgressMessage('');
+    const existing = practicalRecords.find(item => item.experiment_id === experiment.id && item.student_id === student.id);
+    const attendanceDate = todayKey;
+    const values = {
+      attendance_status: status,
+      attendance_date: attendanceDate,
+      marked_by: session.user.id,
+      updated_at: new Date().toISOString(),
+    };
+    const result = existing
+      ? await supabase.from('labmate_practical_records').update(values).eq('id', existing.id).select('*').single()
+      : await supabase.from('labmate_practical_records').insert({
+        student_id: student.id,
+        experiment_id: experiment.id,
+        ...values,
+      }).select('*').single();
+    if (result.error) setProgressError(result.error.message);
+    else {
+      setPracticalRecords(current => current.some(item => item.id === result.data.id)
+        ? current.map(item => item.id === result.data.id ? result.data : item)
+        : [...current, result.data]);
+      setProgressMessage(`Attendance saved for ${student.full_name}.`);
+    }
+    setProgressBusy(false);
   };
 
   const handleUpload = async event => {
@@ -591,6 +713,8 @@ function App() {
         <a className={activePage === 'dashboard' ? 'nav-item active' : 'nav-item'} href="#dashboard"><Icon name="grid" />Dashboard</a>
         <a className={activePage === 'labs' ? 'nav-item active' : 'nav-item'} href="#labs"><Icon name="flask" />Labs</a>
         <a className={activePage === 'experiments' ? 'nav-item active' : 'nav-item'} href="#experiments"><Icon name="book" />Experiments</a>
+        <a className={activePage === 'timetable' ? 'nav-item active' : 'nav-item'} href="#timetable"><Icon name="calendar" />Timetable</a>
+        <a className={activePage === 'progress' ? 'nav-item active' : 'nav-item'} href="#progress"><Icon name="check" />Progress</a>
         <a className={activePage === 'materials' ? 'nav-item active' : 'nav-item'} href="#materials"><Icon name="file" />Materials</a>
         {profile && <a className={activePage === 'profile' ? 'nav-item active' : 'nav-item'} href="#profile"><Icon name="people" />Profile</a>}
       </nav>
@@ -618,11 +742,22 @@ function App() {
           <article className="metric-card"><div className="metric-top"><span>EXPERIMENTS</span><Icon name="book" size={17} /></div><div className="metric-value">{profile ? experiments.length : '—'}<span className="metric-unit"> {profile ? 'listed' : 'sign in'}</span></div><div className="metric-foot">For the selected lab</div></article>
           <article className="metric-card"><div className="metric-top"><span>SHARED FILES</span><Icon name="file" size={17} /></div><div className="metric-value">{profile ? sharedFiles.length : '—'}<span className="metric-unit"> {profile ? 'files' : 'sign in'}</span></div><div className="metric-foot">For the selected lab</div></article>
         </section>
+        <section className="dashboard-section reminder-section">
+          <div className="section-heading"><div><div className="section-kicker">COMING UP</div><h2>Practical reminders</h2><p>Dates set by faculty for your year.</p></div><a className="quiet-button" href="#timetable">Full timetable</a></div>
+          {!profile && <p className="empty-list">Sign in to see your practical dates.</p>}
+          {profile && upcomingSchedule.length === 0 && <p className="empty-list">No future practical dates are scheduled yet.</p>}
+          {profile && upcomingSchedule.length > 0 && <ul className="reminder-list">{upcomingSchedule.slice(0, 3).map(item => {
+            const remaining = daysUntil(item.scheduled_on);
+            return <li key={item.id}><span className="reminder-date">{new Date(`${item.scheduled_on}T12:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span><span className="reminder-copy"><b>{item.title}</b><small>{item.subject_name} · {item.lab_course}</small></span><span className={remaining <= 3 ? 'reminder-count soon' : 'reminder-count'}>{remaining === 0 ? 'Today' : remaining === 1 ? 'Tomorrow' : `In ${remaining} days`}</span></li>;
+          })}</ul>}
+        </section>
         <section className="dashboard-section">
           <div className="section-heading"><div><div className="section-kicker">QUICK ACCESS</div><h2>Go to a feature</h2><p>Each area has its own page.</p></div></div>
           <div className="dashboard-links">
             <a className="dashboard-link" href="#labs"><span className="dashboard-link-icon"><Icon name="flask" size={18} /></span><span><b>Labs</b><small>Browse courses and choose a lab</small></span><Icon name="arrow" size={16} /></a>
             <a className="dashboard-link" href="#experiments"><span className="dashboard-link-icon"><Icon name="book" size={18} /></span><span><b>Experiments</b><small>View schedules and experiment details</small></span><Icon name="arrow" size={16} /></a>
+            <a className="dashboard-link" href="#timetable"><span className="dashboard-link-icon"><Icon name="calendar" size={18} /></span><span><b>Timetable</b><small>Upcoming practical dates and reminders</small></span><Icon name="arrow" size={16} /></a>
+            {profile && <a className="dashboard-link" href="#progress"><span className="dashboard-link-icon"><Icon name="check" size={18} /></span><span><b>Attendance &amp; progress</b><small>Track attendance and practical completion</small></span><Icon name="arrow" size={16} /></a>}
             <a className="dashboard-link" href="#materials"><span className="dashboard-link-icon"><Icon name="file" size={18} /></span><span><b>Materials</b><small>Upload and open shared files</small></span><Icon name="arrow" size={16} /></a>
             {profile && <a className="dashboard-link" href="#profile"><span className="dashboard-link-icon"><Icon name="people" size={18} /></span><span><b>Profile</b><small>View your account details</small></span><Icon name="arrow" size={16} /></a>}
           </div>
@@ -679,6 +814,70 @@ function App() {
             </form>}
           </section>
         </section>
+      </>}
+
+      {activePage === 'timetable' && <>
+        <section className="page-heading">
+          <div><div className="eyebrow">LABMATE <span>·</span> SCHEDULE</div><h1>Timetable<span className="heading-period">.</span></h1><p>Upcoming practical dates set by your faculty.</p></div>
+          <a className="quiet-button" href="#labs">Browse labs</a>
+        </section>
+        <section className="schedule-panel">
+          <div className="schedule-panel-heading"><div><div className="section-kicker">{year.toUpperCase()} · SPPU E&amp;TC</div><h2>Upcoming practicals</h2></div><span>{upcomingSchedule.length} scheduled</span></div>
+          {!profile && <p className="empty-list">Sign in to see timetable dates for your branch and year.</p>}
+          {profile && upcomingSchedule.length === 0 && <p className="empty-list">Nothing scheduled yet. Faculty dates will appear here when they add them to an experiment.</p>}
+          {profile && upcomingSchedule.length > 0 && <ol className="schedule-list">{upcomingSchedule.map(item => {
+            const remaining = daysUntil(item.scheduled_on);
+            const semesterLabel = ({ 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII' })[item.semester] || item.semester;
+            return <li key={item.id}>
+              <div className="schedule-date"><b>{new Date(`${item.scheduled_on}T12:00:00`).toLocaleDateString('en-IN', { day: 'numeric' })}</b><span>{new Date(`${item.scheduled_on}T12:00:00`).toLocaleDateString('en-IN', { month: 'short' })}</span></div>
+              <div className="schedule-details"><span className="section-kicker">{item.course_code} · SEMESTER {semesterLabel}</span><h3>{item.title}</h3><p>{item.subject_name} <span>·</span> {item.lab_course}</p>{item.notes && <small>{item.notes}</small>}</div>
+              <span className={remaining <= 3 ? 'reminder-count soon' : 'reminder-count'}>{remaining === 0 ? 'Today' : remaining === 1 ? 'Tomorrow' : `In ${remaining} days`}</span>
+            </li>;
+          })}</ol>}
+        </section>
+        <p className="schedule-footnote">The timetable updates when faculty add or edit an experiment date. Check here for upcoming practical reminders.</p>
+      </>}
+
+      {activePage === 'progress' && <>
+        <section className="page-heading">
+          <div><div className="eyebrow">LABMATE <span>·</span> SUBJECT TRACKING</div><h1>Attendance &amp; progress<span className="heading-period">.</span></h1><p>{canManage ? 'Record class attendance and verify submitted practicals.' : 'Track your attendance and practical completion for this subject.'}</p></div>
+        </section>
+        <div className="course-context"><div><span className="section-kicker">SELECTED SUBJECT</span><b>{selectedCourse.subject}</b><small>{selectedCourse.lab} · {year} · {semester}</small></div><a className="quiet-button" href="#labs">Change subject</a></div>
+        {profile && progressError && <p className="form-message error" role="alert">{progressError}</p>}
+        {profile && progressMessage && <p className="form-message success" role="status">{progressMessage}</p>}
+        {!profile && <p className="empty-list">Sign in to view subject attendance and practical progress.</p>}
+        {profile && experiments.length === 0 && <p className="empty-list">No experiments are listed for this subject yet.</p>}
+        {profile && experiments.length > 0 && <section className="progress-list" aria-label="Practical progress for selected subject">
+          <div className="progress-explainer">{canManage ? 'Select an attendance status for each student. Students can submit completed work for your review.' : 'Mark each practical complete when you finish it. Faculty can then verify your work.'}</div>
+          {experiments.map(experiment => {
+            const ownRecord = practicalRecords.find(item => item.experiment_id === experiment.id && item.student_id === session?.user?.id);
+            const attendanceName = { not_marked: 'Not marked', present: 'Present', absent: 'Absent', late: 'Late' };
+            const completionName = { not_started: 'Not started', submitted: 'Awaiting faculty review', verified: 'Verified' };
+            return <article className="progress-experiment" key={experiment.id}>
+              <div className="progress-experiment-heading"><div><span className="section-kicker">EXPERIMENT {experiment.experiment_number}{experiment.scheduled_on ? ` · ${new Date(`${experiment.scheduled_on}T12:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}</span><h2>{experiment.title}</h2></div></div>
+              {!canManage && <div className="student-progress-row">
+                <div className="progress-statuses"><span>Attendance <b>{attendanceName[ownRecord?.attendance_status || 'not_marked']}</b></span><span>Practical <b>{completionName[ownRecord?.completion_status || 'not_started']}</b></span></div>
+                {ownRecord?.completion_status === 'not_started' || !ownRecord
+                  ? <button className="upload-button" onClick={() => savePracticalCompletion(experiment)} disabled={progressBusy}>{progressBusy ? 'Saving…' : 'Mark complete'}</button>
+                  : ownRecord.completion_status === 'submitted' ? <span className="progress-tag">Sent for review</span> : <span className="progress-tag verified"><Icon name="check" size={14} /> Verified</span>}
+              </div>}
+              {canManage && <div className="roster-list">
+                {studentRoster.length === 0 && <p className="empty-list">No active students are registered in this year yet.</p>}
+                {studentRoster.map(student => {
+                  const record = practicalRecords.find(item => item.experiment_id === experiment.id && item.student_id === student.id);
+                  return <div className="roster-row" key={student.id}>
+                    <div className="roster-person"><b>{student.full_name}</b><small>Roll no. {student.roll_number} · {completionName[record?.completion_status || 'not_started']}</small></div>
+                    <select aria-label={`Attendance for ${student.full_name}`} value={record?.attendance_status || 'not_marked'} onChange={event => saveAttendance(student, experiment, event.target.value)} disabled={progressBusy}>
+                      <option value="not_marked">Mark attendance</option><option value="present">Present</option><option value="absent">Absent</option><option value="late">Late</option>
+                    </select>
+                    {record?.completion_status === 'submitted' && <button className="quiet-button" onClick={() => savePracticalCompletion(experiment, 'verified', student.id)} disabled={progressBusy}>Verify</button>}
+                    {record?.completion_status === 'verified' && <span className="progress-tag verified">Verified</span>}
+                  </div>;
+                })}
+              </div>}
+            </article>;
+          })}
+        </section>}
       </>}
 
       {activePage === 'materials' && <>
