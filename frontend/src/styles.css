@@ -593,6 +593,8 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
 .schedule-footnote { margin-top: 13px; color: #94a6b6; font-size: 11px; line-height: 1.6; }
 .progress-list { display: grid; gap: 12px; }
 .progress-explainer { padding: 12px 14px; color: #adbfcc; border: 1px solid #28425c; border-radius: 6px; background: #0b1a31; font-size: 11px; line-height: 1.6; }
+.progress-subject-select { display: block; min-width: min(420px, 75vw); margin: 2px 0 5px; padding: 8px 10px; color: #e7eff4; border: 1px solid #34506a; border-radius: 5px; background: #0c1b31; font-size: 12px; }
+.progress-subject-select option { color: #10233f; }
 .progress-experiment { overflow: hidden; border: 1px solid #203650; border-radius: 7px; background: #0a1730; }
 .progress-experiment-heading { padding: 15px 17px; border-bottom: 1px solid #1b3049; }
 .progress-experiment-heading h2 { margin-top: 5px; color: #e9f0f4; font: 600 14px Manrope, sans-serif; line-height: 1.5; }
@@ -601,15 +603,27 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
 .progress-statuses>span { display: grid; gap: 4px; color: #90a5b5; font-size: 10px; }
 .progress-statuses b { color: #dbe6ec; font-size: 11px; font-weight: 500; }
 .progress-tag { display: inline-flex; align-items: center; gap: 5px; padding: 6px 9px; color: #cbd8df; border: 1px solid #3a5268; border-radius: 18px; background: #13253b; font-size: 10px; white-space: nowrap; }
-.progress-tag.verified { color: #d9e8e8; border-color: #4b6a70; background: #17323a; }
+.progress-tag.complete { color: #d9e8e8; border-color: #4b6a70; background: #17323a; }
+.evidence-panel { display: grid; gap: 8px; padding: 0 17px 15px; color: #9fb2c1; font-size: 10px; line-height: 1.5; }
+.evidence-input { width: 100%; max-width: 520px; padding: 7px; color: #d8e4eb; border: 1px solid #29435f; border-radius: 5px; background: #0c1b31; font: 10px 'DM Sans', sans-serif; }
+.evidence-input::file-selector-button { margin-right: 9px; padding: 6px 9px; color: #edf4f7; border: 1px solid #55799c; border-radius: 4px; background: #1a3f75; font: 10px 'DM Sans', sans-serif; cursor: pointer; }
+.evidence-input:disabled { opacity: .6; }
+.evidence-hint { color: #899fb0; font-size: 9px; }
+.evidence-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.evidence-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid #1b3049; }
+.evidence-list li span { overflow: hidden; color: #d4e0e7; text-overflow: ellipsis; white-space: nowrap; }
 .roster-list { display: grid; padding: 0 17px; }
-.roster-row { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 11px 0; border-bottom: 1px solid #1b3049; }
+.roster-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0; padding: 11px 0; border-bottom: 1px solid #1b3049; }
 .roster-row:last-child { border-bottom: 0; }
 .roster-person { display: grid; flex: 1; gap: 4px; min-width: 0; }
 .roster-person b { overflow: hidden; color: #e1ebf0; font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .roster-person small { color: #92a7b7; font-size: 10px; line-height: 1.4; }
 .roster-row select { min-height: 34px; max-width: 145px; padding: 0 7px; color: #dce7ed; border: 1px solid #34506a; border-radius: 5px; background: #0c1b31; font: 10px 'DM Sans', sans-serif; }
 .roster-row .quiet-button { min-height: 34px; }
+.roster-evidence { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; grid-column: 1 / -1; padding: 7px 9px; border-radius: 4px; background: #0c1b31; }
+.roster-evidence>span { color: #8fa5b5; font-size: 9px; }
+.roster-evidence>small { color: #8298a9; font-size: 9px; }
+.roster-evidence .file-access { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 740px) {
   .reminder-section .section-heading { align-items: flex-start; }
   .reminder-list li { gap: 8px; padding: 10px; }
@@ -629,10 +643,12 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
   .student-progress-row { align-items: flex-start; flex-direction: column; padding: 12px 13px; }
   .progress-experiment-heading { padding: 13px; }
   .roster-list { padding: 0 12px; }
-  .roster-row { align-items: flex-start; flex-wrap: wrap; gap: 8px; }
-  .roster-person { flex: 1 0 calc(100% - 4px); }
-  .roster-row select { flex: 1; max-width: none; min-height: 38px; font-size: 12px; }
+  .evidence-panel { padding: 0 13px 13px; }
+  .roster-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .roster-person { min-width: 0; }
+  .roster-row select { width: 100%; max-width: none; min-height: 38px; font-size: 12px; }
   .roster-row .quiet-button { min-height: 38px; }
+  .progress-subject-select { min-width: min(280px, 75vw); max-width: 100%; }
   .nav-list { justify-content: flex-start; overflow-x: auto; scrollbar-width: thin; }
   .nav-item { flex: 1 0 58px; min-width: 58px; }
 }
