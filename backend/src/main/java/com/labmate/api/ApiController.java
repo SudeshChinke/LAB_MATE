@@ -10,6 +10,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 @CrossOrigin(origins = "${labmate.cors.allowed-origin:http://localhost:5173}")
 public class ApiController {
+    @GetMapping("/overview")
+    public SignupSummary overview() {
+        return new SignupSummary(142, 8);
+    }
+
     @GetMapping("/health")
     public Health health() {
         return new Health("ok", "LabMate API is running");
@@ -25,5 +30,6 @@ public class ApiController {
     }
 
     public record Health(String status, String message) {}
+    public record SignupSummary(int students, int faculty) {}
     public record Equipment(String id, String name, String model, int available, int total) {}
 }
