@@ -257,7 +257,7 @@ function App() {
   const semesters = Object.keys(yearData.semesters);
   const courses = yearData.semesters[semester] || yearData.semesters[semesters[0]];
   const selectedCourse = courses.find(course => `${course.code}::${course.subject}` === selectedKey) || courses[0];
-  const semesterNumber = Number(semester.match(/\d+/)?.[0]);
+  const semesterNumber = ({ I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8 })[semester.split(/\s+/).at(-1)] || null;
   const workspaceRole = profile?.role === 'student' ? 'Student' : profile?.role === 'admin' ? 'Admin' : profile ? 'Faculty' : '';
   const canManage = Boolean(profile && ['faculty', 'assistant_professor', 'admin'].includes(profile.role) && ['active', 'approved'].includes(profile.account_status));
   const canUpload = Boolean(profile && ['active', 'approved'].includes(profile.account_status));
