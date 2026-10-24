@@ -295,6 +295,19 @@ function App() {
   const [profileError, setProfileError] = React.useState('');
   const [authOpen, setAuthOpen] = React.useState(false);
   const [authMode, setAuthMode] = React.useState('signup');
+  const [activePage, setActivePage] = React.useState(() => {
+    const requestedPage = window.location.hash.slice(1);
+    return requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'profile'].includes(requestedPage) ? requestedPage : 'dashboard';
+  });
+  React.useEffect(() => {
+    const syncPage = () => {
+      const requestedPage = window.location.hash.slice(1);
+      setActivePage(requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'profile'].includes(requestedPage) ? requestedPage : 'dashboard');
+    };
+    window.addEventListener('hashchange', syncPage);
+    return () => window.removeEventListener('hashchange', syncPage);
+  }, []);
+  const pageTitle = { dashboard: 'Dashboard', labs: 'Labs', experiments: 'Experiments', materials: 'Materials', profile: 'Profile' }[activePage];
   const uploadInput = React.useRef(null);
   const yearData = years[year];
   const semesters = Object.keys(yearData.semesters);
@@ -546,51 +559,82 @@ function App() {
 
   return <div className="app-shell">
     <aside className="sidebar">
-      <a className="brand" href="#home" aria-label="LabMate home"><span className="brand-mark"><Icon name="flask" size={19} /></span><span>labmate<span className="brand-period">.</span></span></a>
+      <a className="brand" href="#dashboard" aria-label="LabMate home"><span className="brand-mark"><Icon name="flask" size={19} /></span><span>labmate<span className="brand-period">.</span></span></a>
       <div className="workspace-label">YOUR COLLEGE</div>
       <button className="college-select"><span className="college-avatar">E</span><span><b>Electronics &amp; Telecommunication</b><small>SPPU · academic workspace</small></span><Icon name="chevron" size={15} /></button>
       <nav className="nav-list" aria-label="Main navigation">
-        <a className="nav-item active" href="#subjects"><Icon name="flask" />Labs</a>
-        <a className="nav-item" href="#experiments"><Icon name="book" />Experiments</a>
-        <a className="nav-item" href="#materials"><Icon name="file" />Materials</a>
-        {profile && <a className="nav-item" href="#profile"><Icon name="people" />Profile</a>}
+        <a className={activePage === 'dashboard' ? 'nav-item active' : 'nav-item'} href="#dashboard"><Icon name="grid" />Dashboard</a>
+        <a className={activePage === 'labs' ? 'nav-item active' : 'nav-item'} href="#labs"><Icon name="flask" />Labs</a>
+        <a className={activePage === 'experiments' ? 'nav-item active' : 'nav-item'} href="#experiments"><Icon name="book" />Experiments</a>
+        <a className={activePage === 'materials' ? 'nav-item active' : 'nav-item'} href="#materials"><Icon name="file" />Materials</a>
+        {profile && <a className={activePage === 'profile' ? 'nav-item active' : 'nav-item'} href="#profile"><Icon name="people" />Profile</a>}
       </nav>
       <div className="sidebar-note"><span className="note-mark" />Only syllabus lab and practical courses appear here.</div>
       <div className="sidebar-bottom"><span className="year-label">ACADEMIC YEARS</span><div className="year-list">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'year-link current' : 'year-link'}>{item}<span>{Object.keys(years[item].semesters).length}</span></button>)}</div><div className="profile"><div className="profile-avatar">{workspaceRole === 'Faculty' ? 'FC' : workspaceRole === 'Admin' ? 'AD' : profile ? 'ST' : '—'}</div><span><b>{profile?.full_name || 'Not signed in'}</b><small>{profile ? workspaceRole : 'Sign in for files and schedules'}</small></span></div></div>
     </aside>
 
-    <main className="main-content" id="home">
-      <header className="topbar"><div className="breadcrumbs">LabMate <span>/</span> Labs</div><div className="topbar-actions">{profile ? <><span className="signed-in-name">{profile.full_name}<small>{workspaceRole}</small></span><button className="quiet-button" onClick={handleSignOut}>Sign out</button></> : <><button className="quiet-button" onClick={() => { setAuthMode('signin'); setAuthOpen(true); }}>Sign in</button><button className="auth-top-button" onClick={() => { setAuthMode('signup'); setAuthOpen(true); }}>Create account</button></>}</div></header>
-      <section className="page-heading"><div><div className="eyebrow">SPPU E&amp;TC <span>·</span> LABS &amp; PRACTICALS</div><h1>LabMate<span className="heading-period">.</span></h1><p>Semester lab courses, syllabus experiments, schedules, and shared files.</p></div><div className="year-switch" role="group" aria-label="Choose academic year">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'selected' : ''}>{item}</button>)}</div></section>
+    <main className="main-content">
+      <header className="topbar">
+        <div className="breadcrumbs">LabMate <span>/</span> {pageTitle}</div>
+        <div className="topbar-actions">
+          <a className="home-button" href="#dashboard"><Icon name="grid" size={15} />Home</a>
+          {profile ? <><span className="signed-in-name">{profile.full_name}<small>{workspaceRole}</small></span><button className="quiet-button" onClick={handleSignOut}>Sign out</button></> : <><button className="quiet-button" onClick={() => { setAuthMode('signin'); setAuthOpen(true); }}>Sign in</button><button className="auth-top-button" onClick={() => { setAuthMode('signup'); setAuthOpen(true); }}>Create account</button></>}
+        </div>
+      </header>
 
-      <section className="metrics-grid" aria-label="Semester lab overview">
-        <article className="metric-card"><div className="metric-top"><span>{semester.toUpperCase()} LAB COURSES</span><Icon name="flask" size={17} /></div><div className="metric-value">{courses.length}<span className="metric-unit"> lab sections</span></div><div className="metric-foot">Combined syllabus labs are split by subject</div></article>
-        <article className="metric-card"><div className="metric-top"><span>EXPERIMENTS</span><Icon name="book" size={17} /></div><div className="metric-value">{profile ? experiments.length : '—'}<span className="metric-unit"> {profile ? 'listed' : 'sign in'}</span></div><div className="metric-foot">Dates and details maintained by faculty</div></article>
-        <article className="metric-card"><div className="metric-top"><span>SHARED FILES</span><Icon name="file" size={17} /></div><div className="metric-value">{profile ? sharedFiles.length : '—'}<span className="metric-unit"> {profile ? 'files' : 'sign in'}</span></div><div className="metric-foot">Stored for the selected lab course</div></article>
-      </section>
-      {profile?.role === 'admin' && <ApprovalPanel client={supabase} />}
+      {activePage === 'dashboard' && <>
+        <section className="page-heading dashboard-heading">
+          <div><div className="eyebrow">SPPU E&amp;TC <span>·</span> LABMATE</div><h1>Dashboard<span className="heading-period">.</span></h1><p>{profile ? 'Welcome, ' + profile.full_name + '. Pick up where you left off.' : 'Your labs, experiments, and shared course materials in one place.'}</p></div>
+          <div className="year-switch" role="group" aria-label="Choose academic year">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'selected' : ''}>{item}</button>)}</div>
+        </section>
+        <div className="dashboard-context"><span className="section-kicker">CURRENT VIEW</span><b>{year} · {semester}</b><div className="semester-switch" role="group" aria-label="Choose semester">{semesters.map(item => <button key={item} onClick={() => chooseSemester(item)} className={semester === item ? 'selected' : ''}>{item}</button>)}</div></div>
+        <section className="metrics-grid" aria-label="Semester overview">
+          <article className="metric-card"><div className="metric-top"><span>LAB COURSES</span><Icon name="flask" size={17} /></div><div className="metric-value">{courses.length}<span className="metric-unit"> in {semester}</span></div><div className="metric-foot">For {year}</div></article>
+          <article className="metric-card"><div className="metric-top"><span>EXPERIMENTS</span><Icon name="book" size={17} /></div><div className="metric-value">{profile ? experiments.length : '—'}<span className="metric-unit"> {profile ? 'listed' : 'sign in'}</span></div><div className="metric-foot">For the selected lab</div></article>
+          <article className="metric-card"><div className="metric-top"><span>SHARED FILES</span><Icon name="file" size={17} /></div><div className="metric-value">{profile ? sharedFiles.length : '—'}<span className="metric-unit"> {profile ? 'files' : 'sign in'}</span></div><div className="metric-foot">For the selected lab</div></article>
+        </section>
+        <section className="dashboard-section">
+          <div className="section-heading"><div><div className="section-kicker">QUICK ACCESS</div><h2>Go to a feature</h2><p>Each area has its own page.</p></div></div>
+          <div className="dashboard-links">
+            <a className="dashboard-link" href="#labs"><span className="dashboard-link-icon"><Icon name="flask" size={18} /></span><span><b>Labs</b><small>Browse courses and choose a lab</small></span><Icon name="arrow" size={16} /></a>
+            <a className="dashboard-link" href="#experiments"><span className="dashboard-link-icon"><Icon name="book" size={18} /></span><span><b>Experiments</b><small>View schedules and experiment details</small></span><Icon name="arrow" size={16} /></a>
+            <a className="dashboard-link" href="#materials"><span className="dashboard-link-icon"><Icon name="file" size={18} /></span><span><b>Materials</b><small>Upload and open shared files</small></span><Icon name="arrow" size={16} /></a>
+            {profile && <a className="dashboard-link" href="#profile"><span className="dashboard-link-icon"><Icon name="people" size={18} /></span><span><b>Profile</b><small>View your account details</small></span><Icon name="arrow" size={16} /></a>}
+          </div>
+        </section>
+        {profile?.role === 'admin' && <ApprovalPanel client={supabase} />}
+      </>}
 
-      <div className="section-heading" id="subjects"><div><div className="section-kicker">LAB COURSES</div><h2>{year} · {semester}</h2><p>Choose a lab section to see its experiments and shared material.</p></div><a className="curriculum-tag" href={yearData.source} target="_blank" rel="noreferrer">{yearData.pattern} · source ↗</a></div>
-      <div className="semester-switch" role="group" aria-label="Choose semester">{semesters.map(item => <button key={item} onClick={() => chooseSemester(item)} className={semester === item ? 'selected' : ''}>{item}</button>)}</div>
-      {yearData.note && <p className="curriculum-note">{yearData.note}</p>}
-      <div className="workspace-grid">
-        <section className="subject-panel" aria-label="Lab course list">
+      {activePage === 'labs' && <>
+        <section className="page-heading">
+          <div><div className="eyebrow">SPPU E&amp;TC <span>·</span> CURRICULUM</div><h1>Labs<span className="heading-period">.</span></h1><p>Choose an academic year, semester, and lab course.</p></div>
+          <div className="year-switch" role="group" aria-label="Choose academic year">{Object.keys(years).map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'selected' : ''}>{item}</button>)}</div>
+        </section>
+        <div className="section-heading"><div><div className="section-kicker">LAB COURSES</div><h2>{year} · {semester}</h2><p>Select a lab to view its experiments or materials.</p></div><a className="curriculum-tag" href={yearData.source} target="_blank" rel="noreferrer">{yearData.pattern} · source ↗</a></div>
+        <div className="semester-switch" role="group" aria-label="Choose semester">{semesters.map(item => <button key={item} onClick={() => chooseSemester(item)} className={semester === item ? 'selected' : ''}>{item}</button>)}</div>
+        {yearData.note && <p className="curriculum-note">{yearData.note}</p>}
+        <section className="subject-panel labs-panel" aria-label="Lab course list">
           <div className="panel-topline"><span>LAB COURSE · SUBJECT</span><span>CODE</span></div>
           <div className="subject-list">{courses.map(course => {
-            const key = `${course.code}::${course.subject}`;
+            const key = course.code + '::' + course.subject;
             return <button key={key} onClick={() => setSelectedKey(key)} className={selectedCourse.code === course.code && selectedCourse.subject === course.subject ? 'subject-row selected' : 'subject-row'}>
-              <span className="subject-name"><b>{course.lab}</b><small>{course.elective ? `${course.elective} (${course.subject})` : course.subject}</small></span><span className="subject-code">{course.code}</span><Icon name="arrow" size={15} />
+              <span className="subject-name"><b>{course.lab}</b><small>{course.elective ? course.elective + ' (' + course.subject + ')' : course.subject}</small></span><span className="subject-code">{course.code}</span><Icon name="arrow" size={15} />
             </button>;
           })}</div>
           <div className="subject-footer"><span className="check-icon"><Icon name="check" size={14} /></span>{courses.length} lab sections in this semester</div>
         </section>
+        <div className="labs-next-actions"><span>Selected lab: <b>{selectedCourse.lab}</b></span><a className="quiet-button" href="#experiments">View experiments</a><a className="quiet-button" href="#materials">View materials</a></div>
+      </>}
 
-        <section className="detail-panel" id="materials">
-          <div className="detail-heading"><div><div className="section-kicker">LAB COURSE</div><h2>{selectedCourse.lab}</h2><p>{selectedCourse.code} · {selectedCourse.elective ? `${selectedCourse.elective} (${selectedCourse.subject})` : selectedCourse.subject} · {year} · {semester}</p></div><span className="subject-glyph"><Icon name="flask" size={20} /></span></div>
-          <div className="detail-stats"><div><b>{experiments.length}</b><span>experiments listed</span></div><div><b>{sharedFiles.length}</b><span>shared files</span></div></div>
-          <section className="experiment-section" id="experiments">
-            <div className="material-heading"><h3>Experiments &amp; schedule</h3><a className="syllabus-link" href={yearData.source} target="_blank" rel="noreferrer">Syllabus ↗</a></div>
-            {!profile && <p className="empty-list">Sign in to view the experiment schedule and shared course files.</p>}
+      {activePage === 'experiments' && <>
+        <section className="page-heading">
+          <div><div className="eyebrow">LABMATE <span>·</span> COURSE WORK</div><h1>Experiments<span className="heading-period">.</span></h1><p>Review experiment details and dates for the selected lab.</p></div>
+        </section>
+        <div className="course-context"><div><span className="section-kicker">SELECTED LAB</span><b>{selectedCourse.lab}</b><small>{selectedCourse.code} · {selectedCourse.subject} · {year} · {semester}</small></div><a className="quiet-button" href="#labs">Change lab</a></div>
+        <section className="detail-panel page-detail-panel">
+          <section className="experiment-section">
+            <div className="material-heading"><div><div className="section-kicker">SCHEDULE</div><h2>Experiments &amp; schedule</h2></div><a className="syllabus-link" href={yearData.source} target="_blank" rel="noreferrer">Syllabus ↗</a></div>
+            {!profile && <p className="empty-list">Sign in to view this experiment schedule.</p>}
             {profile && workError && <p className="form-message error" role="alert">{workError}</p>}
             {profile && workMessage && <p className="form-message success" role="status">{workMessage}</p>}
             {profile && experiments.length === 0 && <p className="empty-list">No experiments have been entered for this lab yet.</p>}
@@ -600,45 +644,58 @@ function App() {
                 <label>Scheduled date<input type="date" value={editingExperiment.scheduled_on || ''} onChange={event => setEditingExperiment(current => ({ ...current, scheduled_on: event.target.value }))} /></label>
                 <label>Notes<textarea value={editingExperiment.notes || ''} onChange={event => setEditingExperiment(current => ({ ...current, notes: event.target.value }))} rows="2" /></label>
                 <div className="form-actions"><button className="upload-button" disabled={saving}>Save changes</button><button type="button" className="quiet-button" onClick={() => setEditingExperiment(null)}>Cancel</button></div>
-              </form> : <div className="experiment-item"><div><b>Experiment {experiment.experiment_number} · {experiment.title}</b><small>{experiment.scheduled_on ? `Scheduled ${new Date(`${experiment.scheduled_on}T12:00:00`).toLocaleDateString()}` : 'Date not set'}{experiment.notes ? ` · ${experiment.notes}` : ''}</small></div>{canManage && <button className="quiet-button" onClick={() => setEditingExperiment({ id: experiment.id, title: experiment.title, scheduled_on: experiment.scheduled_on || '', notes: experiment.notes || '' })}>Edit</button>}</div>}
+              </form> : <div className="experiment-item"><div><b>Experiment {experiment.experiment_number} · {experiment.title}</b><small>{experiment.scheduled_on ? 'Scheduled ' + new Date(experiment.scheduled_on + 'T12:00:00').toLocaleDateString() : 'Date not set'}{experiment.notes ? ' · ' + experiment.notes : ''}</small></div>{canManage && <button className="quiet-button" onClick={() => setEditingExperiment({ id: experiment.id, title: experiment.title, scheduled_on: experiment.scheduled_on || '', notes: experiment.notes || '' })}>Edit</button>}</div>}
             </li>)}</ol>}
             {profile && canManage && <form className="experiment-form add-experiment-form" onSubmit={addExperiment}>
-              <h4>Add an experiment</h4>
+              <h3>Add an experiment</h3>
               <label>Experiment name<input value={experimentDraft.title} onChange={event => setExperimentDraft(current => ({ ...current, title: event.target.value }))} placeholder="Enter the syllabus experiment" required maxLength="500" /></label>
               <div className="form-row"><label>Scheduled date<input type="date" value={experimentDraft.scheduled_on} onChange={event => setExperimentDraft(current => ({ ...current, scheduled_on: event.target.value }))} /></label><label>Notes<input value={experimentDraft.notes} onChange={event => setExperimentDraft(current => ({ ...current, notes: event.target.value }))} placeholder="Optional" maxLength="1000" /></label></div>
               <button className="upload-button" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Add experiment'}</button>
             </form>}
           </section>
-          <section className="materials-section" aria-label="Shared course files">
-            <div className="material-heading"><h3>Shared course files</h3>{canUpload && <button className="upload-button" onClick={() => uploadInput.current?.click()} disabled={saving}><Icon name="upload" size={15} />Upload file</button>}</div>
+        </section>
+      </>}
+
+      {activePage === 'materials' && <>
+        <section className="page-heading">
+          <div><div className="eyebrow">LABMATE <span>·</span> COURSE WORK</div><h1>Materials<span className="heading-period">.</span></h1><p>Share practical sheets, notes, and syllabus material.</p></div>
+        </section>
+        <div className="course-context"><div><span className="section-kicker">SELECTED LAB</span><b>{selectedCourse.lab}</b><small>{selectedCourse.code} · {selectedCourse.subject} · {year} · {semester}</small></div><a className="quiet-button" href="#labs">Change lab</a></div>
+        <section className="detail-panel page-detail-panel">
+          <section className="materials-section page-materials-section" aria-label="Shared course files">
+            <div className="material-heading"><div><div className="section-kicker">COURSE LIBRARY</div><h2>Shared course files</h2></div>{canUpload && <button className="upload-button" onClick={() => uploadInput.current?.click()} disabled={saving}><Icon name="upload" size={15} />Upload file</button>}</div>
             <input ref={uploadInput} className="file-input" type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.zip,.png,.jpg,.jpeg" onChange={handleUpload} aria-label="Upload course material" />
             <p className="upload-hint">{canUpload ? 'Students and faculty can share practical sheets, notes, and syllabus material (up to 50 MB).' : 'Shared files are available after you sign in with an approved account.'}</p>
+            {profile && workError && <p className="form-message error" role="alert">{workError}</p>}
+            {profile && workMessage && <p className="form-message success" role="status">{workMessage}</p>}
             {profile && sharedFiles.length === 0 && <p className="empty-list">No files have been shared for this lab yet.</p>}
             {profile && sharedFiles.length > 0 && <ul className="material-list">{sharedFiles.map(file => <li key={file.id}><span className="file-glyph"><Icon name="file" size={15} /></span><span className="file-name">{file.original_name}<small>{(file.file_size / (1024 * 1024)).toFixed(2)} MB · {new Date(file.created_at).toLocaleDateString()}</small></span><button className="file-access" onClick={() => openSharedFile(file)}>Open ↗</button></li>)}</ul>}
           </section>
         </section>
-      </div>
-      {profile && <section className="profile-section" id="profile" aria-labelledby="profile-title">
-        <div className="profile-section-heading">
-          <div><div className="section-kicker">MY ACCOUNT</div><h2 id="profile-title">Profile</h2><p>Your LabMate account details.</p></div>
-        </div>
-        <div className="profile-card">
-          <div className="profile-identity">
-            <span className="profile-avatar-large" aria-hidden="true">{(profile.full_name || 'LabMate').split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()}</span>
-            <div><h3>{profile.full_name}</h3><p>{profile.email}</p></div>
-            <span className="profile-status">{profile.account_status === 'active' ? 'Active' : profile.account_status === 'approved' ? 'Approved' : profile.account_status === 'pending' ? 'Pending approval' : 'Not approved'}</span>
+      </>}
+
+      {activePage === 'profile' && <section className="profile-page">
+        {profile ? <>
+          <section className="page-heading"><div><div className="eyebrow">MY ACCOUNT <span>·</span> LABMATE</div><h1>Profile<span className="heading-period">.</span></h1><p>Your LabMate account details.</p></div></section>
+          <div className="profile-card">
+            <div className="profile-identity">
+              <span className="profile-avatar-large" aria-hidden="true">{(profile.full_name || 'LabMate').split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()}</span>
+              <div><h3>{profile.full_name}</h3><p>{profile.email}</p></div>
+              <span className="profile-status">{profile.account_status === 'active' ? 'Active' : profile.account_status === 'approved' ? 'Approved' : profile.account_status === 'pending' ? 'Pending approval' : 'Not approved'}</span>
+            </div>
+            <dl className="profile-facts">
+              <div><dt>Account type</dt><dd>{workspaceRole}</dd></div>
+              <div><dt>Email</dt><dd>{profile.email}</dd></div>
+              {profile.role === 'student' && <>
+                <div><dt>College roll number</dt><dd>{profile.roll_number}</dd></div>
+                <div><dt>Academic year</dt><dd>{profile.academic_year}{profile.academic_year === 2 ? 'nd' : profile.academic_year === 3 ? 'rd' : 'th'} year</dd></div>
+              </>}
+            </dl>
           </div>
-          <dl className="profile-facts">
-            <div><dt>Account type</dt><dd>{workspaceRole}</dd></div>
-            <div><dt>Email</dt><dd>{profile.email}</dd></div>
-            {profile.role === 'student' && <>
-              <div><dt>College roll number</dt><dd>{profile.roll_number}</dd></div>
-              <div><dt>Academic year</dt><dd>{profile.academic_year}{profile.academic_year === 2 ? 'nd' : profile.academic_year === 3 ? 'rd' : 'th'} year</dd></div>
-            </>}
-          </dl>
-        </div>
+        </> : <section className="page-heading"><div><div className="eyebrow">MY ACCOUNT</div><h1>Profile<span className="heading-period">.</span></h1><p>Sign in to view your account details.</p><button className="auth-top-button" onClick={() => { setAuthMode('signin'); setAuthOpen(true); }}>Sign in</button></div></section>}
       </section>}
-      <footer className="page-footer"><span>LabMate <span className="footer-dot">·</span> SPPU E&amp;TC lab workspace.</span><span>{profile ? `Signed in as ${workspaceRole}` : 'Sign in to view experiments and shared files.'}</span></footer>
+
+      <footer className="page-footer"><span>LabMate <span className="footer-dot">·</span> SPPU E&amp;TC lab workspace.</span><span>{profile ? 'Signed in as ' + workspaceRole : 'Sign in to view experiments and shared files.'}</span></footer>
     </main>
     {authOpen && <AuthDialog mode={authMode} setMode={setAuthMode} onClose={() => setAuthOpen(false)} />}
   </div>;
