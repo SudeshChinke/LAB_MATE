@@ -11,14 +11,25 @@ The dashboard currently uses sample data. The API has starter read endpoints bac
 
 ## Run locally
 
-Backend: `cd backend && mvn spring-boot:run`
+Backend:
 
-Frontend: `cd frontend && npm install && npm run dev`
+```sh
+cd backend
+mvn spring-boot:run
+```
 
-Set `VITE_API_BASE_URL` in `frontend/.env.local` to the backend origin. Without it, the dashboard shows its sample data.
+Frontend (in a second terminal):
+
+```sh
+cd frontend
+npm install
+npm run dev
+```
+
+Set `VITE_API_BASE_URL` in `frontend/.env.local` to the backend origin when connecting the UI to the API, for example `http://localhost:8080`. Without it, the dashboard shows its sample data.
 
 ## Deploy
 
-Import this repository into Vercel and set the project Root Directory to `frontend`. The Spring Boot service is a separate Java process and needs a Java-capable host. Configure `VITE_API_BASE_URL` in Vercel after the API has a public HTTPS URL.
+Import this repository into Vercel and set the project Root Directory to `frontend`. Vercel can build the Vite frontend. The Spring Boot service is a separate Java process and needs a Java-capable host; Vercel is not the place to run this conventional Spring Boot app as an always-on server. Configure `VITE_API_BASE_URL` in Vercel after the API has a public HTTPS URL. Keep the database and API credentials on the backend.
 
-The UI and API are a starter. Add persistent storage, authentication, authorization, validation, and audit logging before handling real student or equipment records.
+The UI and API are designed as a starting point, not a production-ready system. Add persistent storage, authentication, authorization, input validation, and audit logging before handling real student or equipment records.
