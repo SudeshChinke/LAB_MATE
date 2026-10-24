@@ -303,6 +303,7 @@ function App() {
     const syncPage = () => {
       const requestedPage = window.location.hash.slice(1);
       setActivePage(requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'profile'].includes(requestedPage) ? requestedPage : 'dashboard');
+      window.scrollTo(0, 0);
     };
     window.addEventListener('hashchange', syncPage);
     return () => window.removeEventListener('hashchange', syncPage);
