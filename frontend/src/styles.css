@@ -86,6 +86,19 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
 .year-switch button { padding: 8px 11px; color: #96aaba; border: 0; border-radius: 4px; background: transparent; font-size: 10px; cursor: pointer; }
 .year-switch button.selected { color: #f0f5f7; background: #1a3f75; }
 .metrics-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.dashboard-context { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 9px 12px; border: 1px solid #203752; border-radius: 6px; background: #0a1730; }
+.dashboard-context .section-kicker { flex: none; margin: 0; }
+.dashboard-context > b { color: #dce7ed; font-size: 13px; font-weight: 600; }
+.dashboard-context .semester-switch { margin: 0 0 0 auto; }
+.dashboard-section { margin-top: 27px; }
+.dashboard-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.dashboard-link { display: flex; align-items: center; gap: 11px; min-width: 0; min-height: 66px; padding: 11px 13px; color: #e4edf2; border: 1px solid #203650; border-radius: 6px; background: #0a1730; text-decoration: none; transition: border-color .15s ease, background-color .15s ease; }
+.dashboard-link:hover, .dashboard-link:focus-visible { border-color: #55799c; background: #10233f; }
+.dashboard-link > span:nth-child(2) { display: grid; flex: 1; gap: 4px; min-width: 0; }
+.dashboard-link b { font-size: 13px; font-weight: 600; }
+.dashboard-link small { overflow: hidden; color: #9aabba; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard-link > svg:last-child { flex: none; color: #9bb6c8; }
+.dashboard-link-icon { display: grid; place-items: center; flex: none; width: 34px; height: 34px; color: #c5d9e5; border: 1px solid #35577b; border-radius: 5px; background: #142d4b; }
 .metric-card { min-height: 116px; padding: 15px 17px 13px; border: 1px solid #203650; border-radius: 6px; background: #0a1730; }
 .metric-top { display: flex; align-items: center; justify-content: space-between; font-size: 9px; }
 .metric-top svg { color: #a9c7d8; }
@@ -381,6 +394,7 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
   .metric-card { min-height: 94px; }
   .access-rules, .workspace-grid { grid-template-columns: minmax(0, 1fr); }
   .dashboard-context, .section-heading, .approval-heading { align-items: flex-start; flex-direction: column; }
+  .dashboard-context .semester-switch { width: 100%; margin: 0; }
   .dashboard-links { grid-template-columns: minmax(0, 1fr); }
   .form-row, .student-fields { grid-template-columns: minmax(0, 1fr); }
   .subject-row { grid-template-columns: minmax(0, 1fr) auto; }
