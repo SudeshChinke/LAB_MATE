@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { Sparkles } from 'lucide-react';
 import './styles.css';
 import { supabase, supabaseConfigured } from './supabaseClient';
 
@@ -87,14 +88,6 @@ const semesterIndex = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8
 const semesterLabelForNumber = number => Object.keys(semesterIndex).find(key => semesterIndex[key] === Number(number)) || String(number);
 
 
-function VoltageMark({ size = 19, className = 'brand-mark' }) {
-  const id = React.useId();
-  return <span className={className}><svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FDE047" /><stop offset="50%" stopColor="#FACC15" /><stop offset="100%" stopColor="#F97316" /></linearGradient></defs>
-    <path d="M13 2L3.5 13.5H11L9.5 22L20.5 10H12.5L14.5 2H13Z" fill={`url(#${id})`} stroke={`url(#${id})`} strokeWidth="0.5" strokeLinejoin="round" />
-  </svg></span>;
-}
-
 function Icon({ name, size = 18 }) {
   const props = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
   const paths = {
@@ -114,6 +107,10 @@ function Icon({ name, size = 18 }) {
     settings: <><circle cx="12" cy="12" r="3" /><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.7a8 8 0 0 1-1.7 1l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.7-1l-1.7.7-1.4-2.4L7.3 15a8 8 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.7.7a8 8 0 0 1 1.7-1l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.7 1l1.7-.7 1.4 2.4-1.4 1.1a8 8 0 0 1-.1 2Z" /></>,
   };
   return <svg {...props}>{paths[name]}</svg>;
+}
+
+function SparkleMark() {
+  return <Sparkles className="brand-spark" aria-hidden="true" strokeWidth={2.3} />;
 }
 
 function AuthDialog({ mode, setMode, onClose }) {
@@ -210,7 +207,7 @@ function AuthDialog({ mode, setMode, onClose }) {
   return <div className="dialog-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && onClose()}>
     <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       <button className="dialog-close" onClick={onClose} aria-label="Close account dialog">×</button>
-      <div className="auth-brand"><VoltageMark size={22} className="auth-brand-mark" /><span><b>LabMate</b><small>COLLEGE LAB SPACE</small></span></div>
+      <div className="auth-brand"><span className="auth-brand-mark"><SparkleMark /></span><span><b>LabMate</b><small>COLLEGE LAB SPACE</small></span></div>
       <div className="section-kicker auth-kicker">{mode === 'signup' ? 'GET STARTED' : mode === 'signin' ? 'YOUR ACCOUNT' : 'ACCOUNT HELP'}</div>
       <h2 id="auth-title">{title}</h2>
       <p className="auth-intro">{intro}</p>
@@ -357,8 +354,6 @@ function App() {
   const [chatConfigured, setChatConfigured] = React.useState(null);
   const [chatError, setChatError] = React.useState('');
   const [chatMessage, setChatMessage] = React.useState('');
-  const [settingLargeText, setSettingLargeText] = React.useState(() => localStorage.getItem('labmate-large-text') === 'true');
-  const [settingReducedMotion, setSettingReducedMotion] = React.useState(() => localStorage.getItem('labmate-reduced-motion') === 'true');
   const [assignmentDraft, setAssignmentDraft] = React.useState([]);
   const [settingsMessage, setSettingsMessage] = React.useState('');
   const [settingsError, setSettingsError] = React.useState('');
@@ -501,16 +496,6 @@ function App() {
       });
     return () => { mounted = false; };
   }, [session?.user?.id, profile?.id, profile?.role]);
-
-  React.useEffect(() => {
-    document.documentElement.classList.toggle('large-text', settingLargeText);
-    localStorage.setItem('labmate-large-text', String(settingLargeText));
-  }, [settingLargeText]);
-
-  React.useEffect(() => {
-    document.documentElement.classList.toggle('reduced-motion', settingReducedMotion);
-    localStorage.setItem('labmate-reduced-motion', String(settingReducedMotion));
-  }, [settingReducedMotion]);
 
   React.useEffect(() => {
     if (!supabase || !session || !profile) {
@@ -1107,9 +1092,9 @@ function App() {
     if (supabase) await supabase.auth.signOut();
   };
 
-  if (!authInitialized || profileLoading) return <div className="account-state"><div className="account-state-card"><VoltageMark size={22} /><p>Loading your LabMate account…</p></div></div>;
+  if (!authInitialized || profileLoading) return <div className="account-state"><div className="account-state-card"><span className="brand-mark"><SparkleMark /></span><p>Loading your LabMate account…</p></div></div>;
   if (session && (!profile || !['active', 'approved'].includes(profile.account_status))) return <div className="account-state"><div className="account-state-card">
-    <VoltageMark size={22} />
+    <span className="brand-mark"><SparkleMark /></span>
     <div className="section-kicker">LABMATE ACCOUNT</div>
     <h1>{profileError ? 'Account setup problem' : profile?.account_status === 'rejected' ? 'Request not approved' : profile?.role === 'student' ? 'Confirm your email' : 'Waiting for admin approval'}</h1>
     <p>{profileError ? 'We could not load your account details. Please try signing in again.' : profile?.account_status === 'rejected' ? 'Your access request was declined. Please contact your college admin for help.' : profile?.role === 'student' ? 'Confirm your email address, then sign in to open your workspace.' : 'Your email is verified. An admin must approve faculty access before the workspace opens.'}</p>
@@ -1119,19 +1104,19 @@ function App() {
 
   return <div className="app-shell">
     <aside className="sidebar">
-      <a className="brand" href="#dashboard" aria-label="LabMate home"><VoltageMark size={19} /><span>labmate<span className="brand-period">.</span></span></a>
+      <a className="brand" href="#dashboard" aria-label="LabMate home"><span className="brand-mark"><SparkleMark /></span><span>labmate<span className="brand-period">.</span></span></a>
       <div className="workspace-label">YOUR COLLEGE</div>
       <div className="college-select"><span className="college-avatar">E</span><span><b>Electronics &amp; Telecommunication</b><small>SPPU · academic workspace</small></span></div>
       <nav className="nav-list" aria-label="Main navigation">
-        <a className={activePage === 'dashboard' ? 'nav-item active' : 'nav-item'} href="#dashboard"><Icon name="grid" />Dashboard</a>
-        <a className={activePage === 'labs' ? 'nav-item active' : 'nav-item'} href="#labs"><Icon name="flask" />Labs</a>
-        <a className={activePage === 'experiments' ? 'nav-item active' : 'nav-item'} href="#experiments"><Icon name="book" />Experiments</a>
-        <a className={activePage === 'timetable' ? 'nav-item active' : 'nav-item'} href="#timetable"><Icon name="calendar" />Timetable</a>
-        <a className={activePage === 'progress' ? 'nav-item active' : 'nav-item'} href="#progress"><Icon name="check" />Attendance</a>
-        <a className={activePage === 'materials' ? 'nav-item active' : 'nav-item'} href="#materials"><Icon name="file" />Materials</a>
-        {profile && <a className={activePage === 'chat' ? 'nav-item active' : 'nav-item'} href="#chat"><Icon name="chat" />Study assistant</a>}
-        {profile && <a className={activePage === 'profile' ? 'nav-item active' : 'nav-item'} href="#profile"><Icon name="people" />Profile</a>}
-        {profile && <a className={activePage === 'settings' ? 'nav-item active' : 'nav-item'} href="#settings"><Icon name="settings" />Settings</a>}
+        <a className={activePage === 'dashboard' ? 'nav-item active' : 'nav-item'} href="#dashboard"><Icon name="grid" /><span className="nav-label">Dashboard</span></a>
+        <a className={activePage === 'labs' ? 'nav-item active' : 'nav-item'} href="#labs"><Icon name="flask" /><span className="nav-label">Labs</span></a>
+        <a className={activePage === 'experiments' ? 'nav-item active' : 'nav-item'} href="#experiments"><Icon name="book" /><span className="nav-label">Experiments</span></a>
+        <a className={activePage === 'timetable' ? 'nav-item active' : 'nav-item'} href="#timetable"><Icon name="calendar" /><span className="nav-label">Timetable</span></a>
+        <a className={activePage === 'progress' ? 'nav-item active' : 'nav-item'} href="#progress"><Icon name="check" /><span className="nav-label">Attendance</span></a>
+        <a className={activePage === 'materials' ? 'nav-item active' : 'nav-item'} href="#materials"><Icon name="file" /><span className="nav-label">Materials</span></a>
+        {profile && <a className={activePage === 'chat' ? 'nav-item active' : 'nav-item'} href="#chat"><Icon name="chat" /><span className="nav-label">Study assistant</span></a>}
+        {profile && <a className={activePage === 'profile' ? 'nav-item active' : 'nav-item'} href="#profile"><Icon name="people" /><span className="nav-label">Profile</span></a>}
+        {profile && <a className={activePage === 'settings' ? 'nav-item active' : 'nav-item'} href="#settings"><Icon name="settings" /><span className="nav-label">Settings</span></a>}
       </nav>
       <div className="sidebar-note"><span className="note-mark" />Only syllabus lab and practical courses appear here.</div>
       <div className="sidebar-bottom"><span className="year-label">ACADEMIC YEARS</span><div className="year-list">{visibleYears.map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'year-link current' : 'year-link'}>{item}<span>{Object.keys(years[item].semesters).length}</span></button>)}</div><div className="profile"><div className="profile-avatar">{workspaceRole === 'Faculty' ? 'FC' : workspaceRole === 'Admin' ? 'AD' : profile ? 'ST' : '—'}</div><span><b>{profile?.full_name || 'Not signed in'}</b><small>{profile ? workspaceRole : 'Sign in for files and schedules'}</small></span></div></div>
@@ -1340,13 +1325,9 @@ function App() {
       </section>}
 
       {activePage === 'settings' && <section className="settings-page">
-        <section className="page-heading"><div><div className="eyebrow">MY ACCOUNT <span>·</span> PREFERENCES</div><h1>Settings<span className="heading-period">.</span></h1><p>Adjust how LabMate looks and manage your account.</p></div></section>
+        <section className="page-heading"><div><div className="eyebrow">MY ACCOUNT <span>·</span> PREFERENCES</div><h1>Settings<span className="heading-period">.</span></h1><p>Manage your account and teaching preferences.</p></div></section>
         {!profile && <p className="empty-list">Sign in to manage your settings.</p>}
         {profile && <>
-          <section className="settings-card"><div className="settings-card-heading"><div><div className="section-kicker">DISPLAY</div><h2>Reading preferences</h2></div></div>
-            <label className="settings-toggle"><span><b>Larger text</b><small>Increase labels and body text for easier reading.</small></span><input type="checkbox" checked={settingLargeText} onChange={event => setSettingLargeText(event.target.checked)} /></label>
-            <label className="settings-toggle"><span><b>Reduce motion</b><small>Limit interface transitions and animation.</small></span><input type="checkbox" checked={settingReducedMotion} onChange={event => setSettingReducedMotion(event.target.checked)} /></label>
-          </section>
           <section className="settings-card"><div className="settings-card-heading"><div><div className="section-kicker">ACCOUNT</div><h2>Sign-in security</h2></div></div>
             <p className="settings-description">Password reset instructions can be sent to <b>{profile.email}</b>.</p>
             <button className="quiet-button" onClick={async () => {

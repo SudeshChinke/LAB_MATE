@@ -4,11 +4,11 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   color: #eaf1f6;
-  background: #00002a;
-  --navy: #00002a;
-  --surface: #0a1730;
-  --surface-raised: #10233f;
-  --surface-soft: #142d4b;
+  background: #07182d;
+  --navy: #07182d;
+  --surface: #0b1b31;
+  --surface-raised: #122943;
+  --surface-soft: #193653;
   --blue: #1a3f75;
   --blue-mid: #446a9c;
   --blue-light: #a9c7d8;
@@ -24,11 +24,12 @@ button { color: inherit; }
 .app-shell { min-height: 100vh; background: var(--navy); }
 .sidebar {
   position: fixed; inset: 0 auto 0 0; display: flex; flex-direction: column;
-  width: 246px; padding: 26px 17px 16px; background: #000021;
+  width: 246px; padding: 26px 17px 16px; background: #051428;
   border-right: 1px solid #172a42;
 }
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 12px 43px; color: #f0f5f8; text-decoration: none; font: 700 20px Manrope, sans-serif; letter-spacing: -.8px; }
-.brand-mark { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #476687; border-radius: 8px; color: #c2d8e5; }
+.brand-mark { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #806744; border-radius: 8px; background: linear-gradient(145deg, #182a3f, #302b28); }
+.brand-spark { display: block; width: 21px; height: 21px; color: #ffc15d; filter: drop-shadow(0 0 6px rgb(255 155 50 / 48%)); }
 .brand-period, .heading-period { color: #a9c7d8; }
 .workspace-label, .year-label, .section-kicker, .eyebrow, .metric-top, .panel-topline {
   color: #9caebe; font: 10px 'DM Mono', monospace; letter-spacing: .9px;
@@ -210,7 +211,7 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
 .auth-submit:disabled { opacity: .55; cursor: not-allowed; }
 .auth-switch { margin-top: 15px; color: #95a7b6; text-align: center; font-size: 10px; }
 .auth-switch button { padding: 0; color: #c7dce8; border: 0; background: transparent; font-size: inherit; text-decoration: underline; cursor: pointer; }
-.account-state { display: grid; place-items: center; min-height: 100vh; padding: 20px; background: #00002a; }
+.account-state { display: grid; place-items: center; min-height: 100vh; padding: 20px; background: var(--navy); }
 .account-state-card { display: grid; justify-items: start; gap: 13px; width: min(100%, 440px); padding: 28px; border: 1px solid #29435f; border-radius: 8px; background: #0a1730; }
 .account-state-card h1 { font-size: 22px; }
 .account-state-card p { color: #a1b1bf; font-size: 11px; line-height: 1.6; }
@@ -449,6 +450,63 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
   .profile-facts dd { font-size: 13px; }
 }
 
+/* Compact, swipeable mobile navigation keeps every destination reachable. */
+@media (max-width: 740px) {
+  .sidebar {
+    background: rgb(5 20 40 / 96%);
+    box-shadow: 0 -8px 24px rgb(0 0 0 / 22%);
+  }
+  .nav-list {
+    justify-content: flex-start;
+    gap: 3px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nav-list::-webkit-scrollbar { height: 3px; }
+  .nav-list::-webkit-scrollbar-thumb { border-radius: 3px; background: #35516a; }
+  .nav-item {
+    flex: 0 0 auto;
+    min-width: 68px;
+    min-height: 58px;
+    padding: 6px 9px;
+    scroll-snap-align: center;
+    font-size: 11px;
+  }
+  .nav-item .nav-label { white-space: nowrap; }
+  .nav-item.active:before { right: 20%; left: 20%; }
+  .main-content { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+  .metrics-grid, .access-rules, .dashboard-links, .workspace-grid,
+  .chat-layout, .profile-facts { min-width: 0; }
+  .topbar { min-width: 0; gap: 8px; }
+  .breadcrumbs { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar-actions { flex: none; }
+  .page-heading, .section-heading, .course-context, .settings-card-heading,
+  .detail-heading { min-width: 0; }
+  .year-switch, .semester-switch { max-width: 100%; }
+  .year-switch button, .semester-switch button { min-height: 40px; }
+  .quiet-button, .auth-top-button, .upload-button, .file-delete { min-height: 40px; }
+  .subject-name b { font-size: 12px; }
+  .subject-name small { font-size: 10px; }
+  .chat-conversation { min-height: min(68vh, 620px); }
+  .chat-messages { min-height: 180px; max-height: 42vh; }
+  .chat-composer textarea { min-height: 76px; font-size: 16px; }
+  .chat-composer-actions { align-items: stretch; }
+  .chat-attach, .chat-composer-actions .upload-button { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; }
+}
+
+@media (min-width: 741px) {
+  .nav-item { min-height: 44px; font-size: 13px; }
+  .main-content { padding-bottom: 36px; }
+  .metrics-grid, .dashboard-links { gap: 16px; }
+  .dashboard-link { min-height: 86px; padding: 16px; }
+  .metric-card, .subject-panel, .detail-panel, .settings-card { border-radius: 8px; }
+}
+
+:focus-visible { outline: 2px solid #a9c7d8; outline-offset: 2px; }
+
 .dashboard-context {
   display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding: 11px 14px;
   border: 1px solid #203650; border-radius: 6px; background: #0a1730;
@@ -518,8 +576,9 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
 .auth-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 22px; }
 .auth-brand-mark {
   display: grid; place-items: center; width: 42px; height: 42px; flex: none;
-  color: #d6e4eb; border: 1px solid #53728b; border-radius: 10px; background: #18334e;
+  color: #d6e4eb; border: 1px solid #705d3e; border-radius: 10px; background: #13223a;
 }
+.auth-brand-mark .brand-spark { width: 29px; height: 29px; }
 .auth-brand>span:last-child { display: grid; gap: 4px; }
 .auth-brand b { color: #f0f5f7; font: 600 16px Manrope, sans-serif; letter-spacing: -.2px; }
 .auth-brand small { color: #9cb1c0; font: 9px 'DM Mono', monospace; letter-spacing: 1px; }
@@ -682,10 +741,6 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
 .chat-setup-notice { display: grid; gap: 5px; margin: -8px 0 14px; padding: 12px 14px; color: #dbe6ec; border: 1px solid #45617c; border-radius: 6px; background: #10233f; font-size: 12px; line-height: 1.5; }
 .chat-setup-notice span { color: #aabcc9; }
 .chat-setup-notice code { color: #e3edf2; font-size: 11px; }
-html.large-text .nav-item, html.large-text .quiet-button, html.large-text .auth-top-button, html.large-text .upload-button,
-html.large-text .page-heading p, html.large-text .subject-name b, html.large-text .settings-card p, html.large-text .chat-bubble p,
-html.large-text .experiment-check, html.large-text .file-access, html.large-text .file-delete, html.large-text .schedule-details p { font-size: 1.1em; }
-html.reduced-motion *, html.reduced-motion *::before, html.reduced-motion *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 @media (max-width: 740px) {
   .chat-layout { grid-template-columns: 1fr; min-height: 0; }
   .chat-sidebar { max-height: 180px; overflow: auto; }
@@ -728,5 +783,32 @@ html.reduced-motion *, html.reduced-motion *::before, html.reduced-motion *::aft
   .progress-subject-select { min-width: min(280px, 75vw); max-width: 100%; }
   .nav-list { justify-content: flex-start; overflow-x: auto; scrollbar-width: thin; }
   .nav-item { flex: 1 0 58px; min-width: 58px; }
+}
+
+/* Keep core copy comfortably readable across the desktop and phone layouts. */
+.nav-item { font-size: 14px; }
+.page-heading p { font-size: 15px; }
+.section-heading p, .settings-card-heading p, .settings-description, .course-context small,
+.empty-list, .schedule-details p, .chat-empty p, .metric-foot { font-size: 13px; }
+.subject-name b, .detail-heading h2, .section-heading h2, .settings-card-heading h2 { font-size: 15px; }
+.settings-toggle b, .profile-facts dd, .chat-bubble p, .experiment-check { font-size: 14px; }
+.settings-toggle small, .profile-facts dt, .chat-privacy-note { font-size: 12px; }
+.eyebrow, .section-kicker, .metric-top, .panel-topline, .subject-code,
+.subject-name small, .practical-count small, .chat-bubble>span, .chat-bubble small { font-size: 11px; }
+@media (max-width: 740px) {
+  .nav-list { justify-content: flex-start; overflow-x: auto; scrollbar-width: thin; }
+  .nav-item { flex: 0 0 auto; min-width: 68px; min-height: 58px; }
+  .page-heading p, .section-heading p, .settings-card-heading p, .settings-description,
+  .course-context small, .empty-list, .schedule-details p, .chat-empty p, .metric-foot { font-size: 14px; }
+  .auth-form label { font-size: 14px; }
+  .auth-form input, .auth-form select { font-size: 16px; }
+  .nav-item { font-size: 12px; }
+  .subject-name b { font-size: 14px; }
+  .subject-name small, .practical-count small, .eyebrow, .section-kicker, .metric-top,
+  .panel-topline, .subject-code, .chat-bubble>span, .chat-bubble small { font-size: 12px; }
+  .reminder-copy small, .reminder-count, .chat-composer-actions>small, .chat-delete { font-size: 12px; }
+  .chat-attach { font-size: 13px; }
+  .detail-heading h2, .section-heading h2, .settings-card-heading h2 { font-size: 17px; }
+  .settings-toggle b, .profile-facts dd, .chat-bubble p, .experiment-check { font-size: 15px; }
 }
 
