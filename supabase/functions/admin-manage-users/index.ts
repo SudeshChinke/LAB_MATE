@@ -20,7 +20,16 @@ Deno.serve(async request => {
   if (!token) return json({ error: 'Sign in as an administrator to continue.' }, 401);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const publishableKey = Deno.env.get('SUPABASE_ANON_KEY');
+  let publishableKey = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!publishableKey) {
+    try {
+      const keyEnvNames = JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS') || '{}');
+      const defaultKeyEnvName = keyEnvNames.default;
+      if (typeof defaultKeyEnvName === 'string') publishableKey = Deno.env.get(defaultKeyEnvName);
+    } catch {
+      publishableKey = undefined;
+    }
+  }
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!supabaseUrl || !publishableKey || !serviceRoleKey) {
     return json({ error: 'Account management is not configured on the server.' }, 500);
