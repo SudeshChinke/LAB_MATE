@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Sparkles } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import './styles.css';
 import { supabase, supabaseConfigured } from './supabaseClient';
 
@@ -109,8 +109,8 @@ function Icon({ name, size = 18 }) {
   return <svg {...props}>{paths[name]}</svg>;
 }
 
-function SparkleMark() {
-  return <Sparkles className="brand-spark" aria-hidden="true" strokeWidth={2.3} />;
+function VoltageMark() {
+  return <Zap className="brand-voltage" aria-hidden="true" strokeWidth={2.5} fill="currentColor" />;
 }
 
 function AuthDialog({ mode, setMode, onClose }) {
@@ -207,7 +207,7 @@ function AuthDialog({ mode, setMode, onClose }) {
   return <div className="dialog-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && onClose()}>
     <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       <button className="dialog-close" onClick={onClose} aria-label="Close account dialog">×</button>
-      <div className="auth-brand"><span className="auth-brand-mark"><SparkleMark /></span><span><b>LabMate</b><small>COLLEGE LAB SPACE</small></span></div>
+      <div className="auth-brand"><span className="auth-brand-mark"><VoltageMark /></span><span><b>LabMate</b><small>COLLEGE LAB SPACE</small></span></div>
       <div className="section-kicker auth-kicker">{mode === 'signup' ? 'GET STARTED' : mode === 'signin' ? 'YOUR ACCOUNT' : 'ACCOUNT HELP'}</div>
       <h2 id="auth-title">{title}</h2>
       <p className="auth-intro">{intro}</p>
@@ -781,7 +781,7 @@ function App() {
       setPracticalRecords(current => current.some(item => item.id === result.data.id)
         ? current.map(item => item.id === result.data.id ? result.data : item)
         : [...current, result.data]);
-      setProgressMessage(`Attendance saved for ${student.full_name}.`);
+      setProgressMessage(`Attendance saved for roll no. ${student.roll_number}.`);
     }
     setProgressBusy(false);
   };
@@ -1092,9 +1092,9 @@ function App() {
     if (supabase) await supabase.auth.signOut();
   };
 
-  if (!authInitialized || profileLoading) return <div className="account-state"><div className="account-state-card"><span className="brand-mark"><SparkleMark /></span><p>Loading your LabMate account…</p></div></div>;
+  if (!authInitialized || profileLoading) return <div className="account-state"><div className="account-state-card"><span className="brand-mark"><VoltageMark /></span><p>Loading your LabMate account…</p></div></div>;
   if (session && (!profile || !['active', 'approved'].includes(profile.account_status))) return <div className="account-state"><div className="account-state-card">
-    <span className="brand-mark"><SparkleMark /></span>
+    <span className="brand-mark"><VoltageMark /></span>
     <div className="section-kicker">LABMATE ACCOUNT</div>
     <h1>{profileError ? 'Account setup problem' : profile?.account_status === 'rejected' ? 'Request not approved' : profile?.role === 'student' ? 'Confirm your email' : 'Waiting for admin approval'}</h1>
     <p>{profileError ? 'We could not load your account details. Please try signing in again.' : profile?.account_status === 'rejected' ? 'Your access request was declined. Please contact your college admin for help.' : profile?.role === 'student' ? 'Confirm your email address, then sign in to open your workspace.' : 'Your email is verified. An admin must approve faculty access before the workspace opens.'}</p>
@@ -1104,7 +1104,7 @@ function App() {
 
   return <div className="app-shell">
     <aside className="sidebar">
-      <a className="brand" href="#dashboard" aria-label="LabMate home"><span className="brand-mark"><SparkleMark /></span><span>labmate<span className="brand-period">.</span></span></a>
+      <a className="brand" href="#dashboard" aria-label="LabMate home"><span className="brand-mark"><VoltageMark /></span><span>labmate<span className="brand-period">.</span></span></a>
       <div className="workspace-label">YOUR COLLEGE</div>
       <div className="college-select"><span className="college-avatar">E</span><span><b>Electronics &amp; Telecommunication</b><small>SPPU · academic workspace</small></span></div>
       <nav className="nav-list" aria-label="Main navigation">
@@ -1247,7 +1247,7 @@ function App() {
 
       {activePage === 'progress' && <>
         <section className="page-heading">
-          <div><div className="eyebrow">LABMATE <span>·</span> SUBJECT TRACKING</div><h1>Attendance<span className="heading-period">.</span></h1><p>{canManage ? 'Record attendance in the lab using each student’s name and roll number.' : 'View attendance recorded by your faculty for each practical.'}</p></div>
+          <div><div className="eyebrow">LABMATE <span>·</span> SUBJECT TRACKING</div><h1>Attendance<span className="heading-period">.</span></h1><p>{canManage ? 'Tap a roll number to mark present. Use A or L to record absent or late.' : 'View attendance recorded by your faculty for each practical.'}</p></div>
         </section>
         <div className="course-context"><div><span className="section-kicker">SELECT SUBJECT</span><select className="progress-subject-select" aria-label="Choose subject for attendance" value={selectedKey} onChange={event => setSelectedKey(event.target.value)}>{courses.map(course => <option key={`${course.code}::${course.subject}`} value={`${course.code}::${course.subject}`}>{course.subject}{course.elective ? ` (${course.elective})` : ''}</option>)}</select><small>{year} · {semester}</small></div><a className="quiet-button" href="#labs">Browse labs</a></div>
         {profile && progressError && <p className="form-message error" role="alert">{progressError}</p>}
@@ -1255,21 +1255,23 @@ function App() {
         {!profile && <p className="empty-list">Sign in to view subject attendance and practical progress.</p>}
         {profile && experiments.length === 0 && <p className="empty-list">No experiments are listed for this subject yet.</p>}
         {profile && experiments.length > 0 && <section className="progress-list" aria-label="Attendance for selected subject">
-          <div className="progress-explainer">Attendance is recorded by approved faculty in person. Match the student’s name and college roll number and, when available, check their college ID before marking present. Students cannot edit attendance.</div>
+          <div className="progress-explainer">Confirm students are present in the lab before recording attendance. Tap a roll number to mark present; use A or L to record absent or late. Students cannot edit attendance.</div>
           {experiments.map(experiment => {
             const ownRecord = practicalRecords.find(item => item.experiment_id === experiment.id && item.student_id === session?.user?.id);
             const attendanceName = { not_marked: 'Not marked', present: 'Present', absent: 'Absent', late: 'Late' };
             return <article className="progress-experiment" key={experiment.id}>
               <div className="progress-experiment-heading"><div><span className="section-kicker">EXPERIMENT {experiment.experiment_number}{experiment.scheduled_on ? ` · ${new Date(`${experiment.scheduled_on}T12:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}</span><h2>{experiment.title}</h2></div>{!canManage && <span className="attendance-status">{attendanceName[ownRecord?.attendance_status || 'not_marked']}</span>}</div>
-              {canManage && <div className="roster-list">
+              {canManage && <div className="roster-list" aria-label="Student roll numbers">
                 {studentRoster.length === 0 && <p className="empty-list">No active students are registered in this year yet.</p>}
                 {studentRoster.map(student => {
                   const record = practicalRecords.find(item => item.experiment_id === experiment.id && item.student_id === student.id);
-                  return <div className="roster-row" key={student.id}>
-                    <div className="roster-person"><b>{student.full_name}</b><small>College roll no. {student.roll_number}</small></div>
-                    <select aria-label={`Attendance for ${student.full_name}, roll number ${student.roll_number}`} value={record?.attendance_status || 'not_marked'} onChange={event => saveAttendance(student, experiment, event.target.value)} disabled={progressBusy}>
-                      <option value="not_marked">Mark attendance</option><option value="present">Present</option><option value="absent">Absent</option><option value="late">Late</option>
-                    </select>
+                  const attendance = record?.attendance_status || 'not_marked';
+                  return <div className={`roster-chip ${attendance}`} key={student.id}>
+                    <button className="roster-roll" type="button" aria-label={`Mark roll number ${student.roll_number} ${attendance === 'present' ? 'not present' : 'present'}`} aria-pressed={attendance === 'present'} onClick={() => saveAttendance(student, experiment, attendance === 'present' ? 'not_marked' : 'present')} disabled={progressBusy}>
+                      {student.roll_number}
+                    </button>
+                    <button className={`roster-status absent${attendance === 'absent' ? ' selected' : ''}`} type="button" aria-label={`Mark roll number ${student.roll_number} absent`} aria-pressed={attendance === 'absent'} onClick={() => saveAttendance(student, experiment, attendance === 'absent' ? 'not_marked' : 'absent')} disabled={progressBusy}>A</button>
+                    <button className={`roster-status late${attendance === 'late' ? ' selected' : ''}`} type="button" aria-label={`Mark roll number ${student.roll_number} late`} aria-pressed={attendance === 'late'} onClick={() => saveAttendance(student, experiment, attendance === 'late' ? 'not_marked' : 'late')} disabled={progressBusy}>L</button>
                   </div>;
                 })}
               </div>}

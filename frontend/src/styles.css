@@ -29,7 +29,7 @@ button { color: inherit; }
 }
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 12px 43px; color: #f0f5f8; text-decoration: none; font: 700 20px Manrope, sans-serif; letter-spacing: -.8px; }
 .brand-mark { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #806744; border-radius: 8px; background: linear-gradient(145deg, #182a3f, #302b28); }
-.brand-spark { display: block; width: 21px; height: 21px; color: #ffc15d; filter: drop-shadow(0 0 6px rgb(255 155 50 / 48%)); }
+.brand-voltage { display: block; width: 21px; height: 21px; color: #ffc15d; stroke: #ff9c38; filter: drop-shadow(0 0 6px rgb(255 155 50 / 48%)); }
 .brand-period, .heading-period { color: #a9c7d8; }
 .workspace-label, .year-label, .section-kicker, .eyebrow, .metric-top, .panel-topline {
   color: #9caebe; font: 10px 'DM Mono', monospace; letter-spacing: .9px;
@@ -578,7 +578,7 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
   display: grid; place-items: center; width: 42px; height: 42px; flex: none;
   color: #d6e4eb; border: 1px solid #705d3e; border-radius: 10px; background: #13223a;
 }
-.auth-brand-mark .brand-spark { width: 29px; height: 29px; }
+.auth-brand-mark .brand-voltage { width: 29px; height: 29px; }
 .auth-brand>span:last-child { display: grid; gap: 4px; }
 .auth-brand b { color: #f0f5f7; font: 600 16px Manrope, sans-serif; letter-spacing: -.2px; }
 .auth-brand small { color: #9cb1c0; font: 9px 'DM Mono', monospace; letter-spacing: 1px; }
@@ -646,7 +646,7 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
 .progress-list { display: grid; gap: 12px; }
 .progress-explainer { padding: 12px 14px; color: #adbfcc; border: 1px solid #28425c; border-radius: 6px; background: #0b1a31; font-size: 11px; line-height: 1.6; }
 .progress-subject-select { display: block; min-width: min(420px, 75vw); margin: 2px 0 5px; padding: 8px 10px; color: #e7eff4; border: 1px solid #34506a; border-radius: 5px; background: #0c1b31; font-size: 12px; }
-.progress-subject-select option { color: #10233f; }
+.progress-subject-select option { color: #e7eff4; background-color: #0c1b31; }
 .progress-experiment { overflow: hidden; border: 1px solid #203650; border-radius: 7px; background: #0a1730; }
 .progress-experiment-heading { padding: 15px 17px; border-bottom: 1px solid #1b3049; }
 .progress-experiment-heading h2 { margin-top: 5px; color: #e9f0f4; font: 600 14px Manrope, sans-serif; line-height: 1.5; }
@@ -664,14 +664,20 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
 .evidence-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
 .evidence-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid #1b3049; }
 .evidence-list li span { overflow: hidden; color: #d4e0e7; text-overflow: ellipsis; white-space: nowrap; }
-.roster-list { display: grid; padding: 0 17px; }
-.roster-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0; padding: 11px 0; border-bottom: 1px solid #1b3049; }
-.roster-row:last-child { border-bottom: 0; }
-.roster-person { display: grid; flex: 1; gap: 4px; min-width: 0; }
-.roster-person b { overflow: hidden; color: #e1ebf0; font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.roster-person small { color: #92a7b7; font-size: 10px; line-height: 1.4; }
-.roster-row select { min-height: 34px; max-width: 145px; padding: 0 7px; color: #dce7ed; border: 1px solid #34506a; border-radius: 5px; background: #0c1b31; font: 10px 'DM Sans', sans-serif; }
-.roster-row .quiet-button { min-height: 34px; }
+.roster-list { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; padding: 13px 17px; }
+.roster-chip { display: inline-flex; align-items: center; gap: 3px; padding: 3px; border: 1px solid #29425d; border-radius: 7px; background: #0c1b31; }
+.roster-chip button { display: grid; place-items: center; min-width: 31px; height: 31px; padding: 0 7px; color: #dce7ed; border: 1px solid transparent; border-radius: 5px; background: transparent; font: 600 12px 'DM Mono', monospace; cursor: pointer; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+.roster-chip button:focus-visible { outline: 2px solid #a9c7d8; outline-offset: 2px; }
+.roster-chip button:disabled { cursor: wait; opacity: .6; }
+.roster-chip .roster-roll { min-width: 42px; color: #eaf1f6; }
+.roster-chip.present { border-color: #39885b; background: #102c25; }
+.roster-chip.present .roster-roll { color: #fff; border-color: #39885b; background: #23864d; }
+.roster-chip .roster-status { min-width: 24px; padding: 0 5px; color: #8fa5b5; font-family: 'DM Sans', sans-serif; }
+.roster-chip .roster-status.absent.selected { color: #fff; border-color: #9a5d5d; background: #723d48; }
+.roster-chip .roster-status.late.selected { color: #fff; border-color: #9a7b42; background: #685226; }
+.roster-chip:not(.present):hover { border-color: #55718d; }
+.roster-roll:hover { background: #193653 !important; }
+.roster-chip.present .roster-roll:hover { background: #2a9b5b !important; }
 .roster-evidence { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; grid-column: 1 / -1; padding: 7px 9px; border-radius: 4px; background: #0c1b31; }
 .roster-evidence>span { color: #8fa5b5; font-size: 9px; }
 .roster-evidence>small { color: #8298a9; font-size: 9px; }
@@ -774,12 +780,8 @@ h1 { color: #eef4f7; font: 500 29px Manrope, sans-serif; letter-spacing: -1px; }
   .schedule-details p { font-size: 10px; }
   .student-progress-row { align-items: flex-start; flex-direction: column; padding: 12px 13px; }
   .progress-experiment-heading { padding: 13px; }
-  .roster-list { padding: 0 12px; }
+  .roster-list { gap: 7px; padding: 12px; }
   .evidence-panel { padding: 0 13px 13px; }
-  .roster-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-  .roster-person { min-width: 0; }
-  .roster-row select { width: 100%; max-width: none; min-height: 38px; font-size: 12px; }
-  .roster-row .quiet-button { min-height: 38px; }
   .progress-subject-select { min-width: min(280px, 75vw); max-width: 100%; }
   .nav-list { justify-content: flex-start; overflow-x: auto; scrollbar-width: thin; }
   .nav-item { flex: 1 0 58px; min-width: 58px; }
