@@ -357,22 +357,31 @@ function App() {
   const [assignmentDraft, setAssignmentDraft] = React.useState([]);
   const [settingsMessage, setSettingsMessage] = React.useState('');
   const [settingsError, setSettingsError] = React.useState('');
+  const [adminAccounts, setAdminAccounts] = React.useState([]);
+  const [adminFacultySubjects, setAdminFacultySubjects] = React.useState([]);
+  const [adminAccountsLoading, setAdminAccountsLoading] = React.useState(false);
+  const [adminAccountsReload, setAdminAccountsReload] = React.useState(0);
+  const [adminAccountsError, setAdminAccountsError] = React.useState('');
+  const [adminAccountsMessage, setAdminAccountsMessage] = React.useState('');
+  const [adminAccountsQuery, setAdminAccountsQuery] = React.useState('');
+  const [adminDeleteTarget, setAdminDeleteTarget] = React.useState(null);
+  const [adminDeleteBusy, setAdminDeleteBusy] = React.useState(false);
   const [authOpen, setAuthOpen] = React.useState(false);
   const [authMode, setAuthMode] = React.useState('signup');
   const [activePage, setActivePage] = React.useState(() => {
     const requestedPage = window.location.hash.slice(1);
-    return requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'timetable', 'progress', 'profile', 'settings', 'chat'].includes(requestedPage) ? requestedPage : 'dashboard';
+    return requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'timetable', 'progress', 'profile', 'settings', 'chat', 'accounts'].includes(requestedPage) ? requestedPage : 'dashboard';
   });
   React.useEffect(() => {
     const syncPage = () => {
       const requestedPage = window.location.hash.slice(1);
-      setActivePage(requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'timetable', 'progress', 'profile', 'settings', 'chat'].includes(requestedPage) ? requestedPage : 'dashboard');
+      setActivePage(requestedPage === 'home' ? 'dashboard' : ['dashboard', 'labs', 'experiments', 'materials', 'timetable', 'progress', 'profile', 'settings', 'chat', 'accounts'].includes(requestedPage) ? requestedPage : 'dashboard');
       window.scrollTo(0, 0);
     };
     window.addEventListener('hashchange', syncPage);
     return () => window.removeEventListener('hashchange', syncPage);
   }, []);
-  const pageTitle = { dashboard: 'Dashboard', labs: 'Labs', experiments: 'Experiments', materials: 'Materials', timetable: 'Timetable', progress: 'Attendance', profile: 'Profile', settings: 'Settings', chat: 'Study assistant' }[activePage];
+  const pageTitle = { dashboard: 'Dashboard', labs: 'Labs', experiments: 'Experiments', materials: 'Materials', timetable: 'Timetable', progress: 'Attendance', profile: 'Profile', settings: 'Settings', chat: 'Study assistant', accounts: 'Accounts' }[activePage];
   const uploadInput = React.useRef(null);
   const availableYears = Object.keys(years);
   const visibleYears = profile?.role === 'student'
@@ -537,6 +546,32 @@ function App() {
     });
     return () => { mounted = false; };
   }, [session?.user?.id, profile?.id, profile?.branch, profile?.role, yearData.number]);
+
+  React.useEffect(() => {
+    if (!supabase || !session || profile?.role !== 'admin' || activePage !== 'accounts') {
+      setAdminAccounts([]);
+      setAdminFacultySubjects([]);
+      return undefined;
+    }
+    let mounted = true;
+    setAdminAccountsLoading(true);
+    setAdminAccountsError('');
+    Promise.all([
+      supabase.from('profiles')
+        .select('id,full_name,email,role,account_status,roll_number,academic_year,branch,created_at')
+        .in('role', ['student', 'faculty', 'assistant_professor'])
+        .order('created_at', { ascending: false }),
+      supabase.from('labmate_faculty_subjects')
+        .select('faculty_id,academic_year,semester,course_code,subject_name'),
+    ]).then(([profilesResult, subjectsResult]) => {
+        if (!mounted) return;
+        setAdminAccounts(profilesResult.data || []);
+        setAdminFacultySubjects(subjectsResult.data || []);
+        setAdminAccountsError(profilesResult.error?.message || subjectsResult.error?.message || '');
+        setAdminAccountsLoading(false);
+      });
+    return () => { mounted = false; };
+  }, [session?.user?.id, profile?.id, profile?.role, activePage, adminAccountsReload]);
 
   React.useEffect(() => {
     if (!supabase || !session || !profile || !['progress', 'experiments'].includes(activePage) || !selectedExperimentIds) {
@@ -1092,6 +1127,30 @@ function App() {
     if (supabase) await supabase.auth.signOut();
   };
 
+  const removeAdminAccount = async () => {
+    if (!supabase || profile?.role !== 'admin' || !adminDeleteTarget || adminDeleteBusy) return;
+    setAdminDeleteBusy(true);
+    setAdminAccountsError('');
+    setAdminAccountsMessage('');
+    try {
+      const { error } = await supabase.functions.invoke('admin-manage-users', {
+        body: { action: 'delete', userId: adminDeleteTarget.id },
+      });
+      if (error) {
+        setAdminAccountsError(error.message || 'Could not remove this account.');
+      } else {
+        setAdminAccounts(current => current.filter(person => person.id !== adminDeleteTarget.id));
+        setAdminFacultySubjects(current => current.filter(item => item.faculty_id !== adminDeleteTarget.id));
+        setAdminAccountsMessage(`${adminDeleteTarget.full_name} was removed. They can sign up again with ${adminDeleteTarget.email}.`);
+        setAdminDeleteTarget(null);
+      }
+    } catch (error) {
+      setAdminAccountsError(error.message || 'Could not reach account management. Try again.');
+    } finally {
+      setAdminDeleteBusy(false);
+    }
+  };
+
   if (!authInitialized || profileLoading) return <div className="account-state"><div className="account-state-card"><span className="brand-mark"><VoltageMark /></span><p>Loading your LabMate account…</p></div></div>;
   if (session && (!profile || !['active', 'approved'].includes(profile.account_status))) return <div className="account-state"><div className="account-state-card">
     <span className="brand-mark"><VoltageMark /></span>
@@ -1117,6 +1176,7 @@ function App() {
         {profile && <a className={activePage === 'chat' ? 'nav-item active' : 'nav-item'} href="#chat"><Icon name="chat" /><span className="nav-label">Study assistant</span></a>}
         {profile && <a className={activePage === 'profile' ? 'nav-item active' : 'nav-item'} href="#profile"><Icon name="people" /><span className="nav-label">Profile</span></a>}
         {profile && <a className={activePage === 'settings' ? 'nav-item active' : 'nav-item'} href="#settings"><Icon name="settings" /><span className="nav-label">Settings</span></a>}
+        {profile?.role === 'admin' && <a className={activePage === 'accounts' ? 'nav-item active' : 'nav-item'} href="#accounts"><Icon name="people" /><span className="nav-label">Accounts</span></a>}
       </nav>
       <div className="sidebar-note"><span className="note-mark" />Only syllabus lab and practical courses appear here.</div>
       <div className="sidebar-bottom"><span className="year-label">ACADEMIC YEARS</span><div className="year-list">{visibleYears.map(item => <button key={item} onClick={() => chooseYear(item)} className={year === item ? 'year-link current' : 'year-link'}>{item}<span>{Object.keys(years[item].semesters).length}</span></button>)}</div><div className="profile"><div className="profile-avatar">{workspaceRole === 'Faculty' ? 'FC' : workspaceRole === 'Admin' ? 'AD' : profile ? 'ST' : '—'}</div><span><b>{profile?.full_name || 'Not signed in'}</b><small>{profile ? workspaceRole : 'Sign in for files and schedules'}</small></span></div></div>
@@ -1360,6 +1420,39 @@ function App() {
           </section>
         </>}
       </section>}
+
+      {activePage === 'accounts' && <section className="accounts-page">
+        <section className="page-heading"><div><div className="eyebrow">ADMIN <span>·</span> ACCOUNT MANAGEMENT</div><h1>Accounts<span className="heading-period">.</span></h1><p>View student and faculty profiles. Remove an account when access should end.</p></div></section>
+        {profile?.role !== 'admin' && <p className="empty-list">Admin access is required to view account profiles.</p>}
+        {profile?.role === 'admin' && <>
+          <div className="accounts-toolbar"><label className="accounts-search">Search accounts<input type="search" value={adminAccountsQuery} onChange={event => setAdminAccountsQuery(event.target.value)} placeholder="Name, email, or roll number" /></label><button className="quiet-button" onClick={() => setAdminAccountsReload(current => current + 1)}>Refresh</button></div>
+          {adminAccountsError && <p className="form-message error" role="alert">{adminAccountsError}</p>}
+          {adminAccountsMessage && <p className="form-message success" role="status">{adminAccountsMessage}</p>}
+          {adminAccountsLoading && <p className="empty-list">Loading account profiles…</p>}
+          {!adminAccountsLoading && adminAccounts.length === 0 && !adminAccountsError && <p className="empty-list">No student or faculty accounts were found.</p>}
+          {!adminAccountsLoading && adminAccounts.length > 0 && <div className="account-directory">
+            {adminAccounts.filter(person => `${person.full_name} ${person.email} ${person.roll_number || ''} ${person.role}`.toLowerCase().includes(adminAccountsQuery.trim().toLowerCase())).map(person => <article className="managed-account" key={person.id}>
+              <div className="managed-account-heading"><div><h2>{person.full_name}</h2><a href={`mailto:${person.email}`}>{person.email}</a></div><span className={`managed-account-status ${person.account_status}`}>{person.account_status.replace('_', ' ')}</span></div>
+              <dl className="managed-account-facts">
+                <div><dt>Account type</dt><dd>{person.role === 'assistant_professor' ? 'Assistant professor' : person.role === 'faculty' ? 'Faculty' : 'Student'}</dd></div>
+                {person.role === 'student' && <><div><dt>Roll number</dt><dd>{person.roll_number || '—'}</dd></div><div><dt>Year</dt><dd>{person.academic_year ? `${person.academic_year}${person.academic_year === 2 ? 'nd' : person.academic_year === 3 ? 'rd' : 'th'} year` : '—'}</dd></div></>}
+                {['faculty', 'assistant_professor'].includes(person.role) && <div className="managed-account-subjects"><dt>Assigned lab subjects</dt><dd>{adminFacultySubjects.filter(item => item.faculty_id === person.id).map(item => `${item.subject_name} · Year ${item.academic_year} · Semester ${semesterLabelForNumber(item.semester)}`).join('; ') || 'No subjects assigned yet'}</dd></div>}
+                <div><dt>Branch</dt><dd>{person.branch || 'E&TC'}</dd></div>
+                <div><dt>Joined</dt><dd>{person.created_at ? new Date(person.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</dd></div>
+              </dl>
+              <button className="managed-account-remove" type="button" onClick={() => setAdminDeleteTarget(person)}>Remove account</button>
+            </article>)}
+            {adminAccounts.filter(person => `${person.full_name} ${person.email} ${person.roll_number || ''} ${person.role}`.toLowerCase().includes(adminAccountsQuery.trim().toLowerCase())).length === 0 && <p className="empty-list">No accounts match that search.</p>}
+          </div>}
+        </>}
+      </section>}
+
+      {adminDeleteTarget && <div className="account-delete-overlay"><section className="account-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="account-delete-title">
+        <div className="section-kicker">ADMIN · REMOVE ACCOUNT</div><h2 id="account-delete-title">Remove {adminDeleteTarget.full_name}?</h2>
+        <p>This permanently deletes their LabMate profile, attendance, practical submissions, saved chats, and uploaded files. Their email address will be available for a new sign-up. This cannot be undone.</p>
+        {adminAccountsError && <p className="form-message error" role="alert">{adminAccountsError}</p>}
+        <div className="account-delete-actions"><button type="button" className="quiet-button" onClick={() => setAdminDeleteTarget(null)} disabled={adminDeleteBusy}>Cancel</button><button type="button" className="managed-account-remove" onClick={removeAdminAccount} disabled={adminDeleteBusy}>{adminDeleteBusy ? 'Removing…' : 'Delete account'}</button></div>
+      </section></div>}
 
       {activePage === 'chat' && <section className="chat-page">
         <section className="page-heading"><div><div className="eyebrow">LABMATE <span>·</span> GEMINI</div><h1>Study assistant<span className="heading-period">.</span></h1><p>Ask about concepts, experiment steps, or attach a small study file.</p></div><button className="upload-button" onClick={createChatSession} disabled={!profile || chatBusy}><Icon name="plus" size={15} />New chat</button></section>
