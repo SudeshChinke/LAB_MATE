@@ -14,7 +14,9 @@ LabMate is a mobile-friendly SPPU E&TC lab workspace for students, faculty, assi
 
 - `frontend/` — Vite + React app and the Vercel `/api/chat` server function.
 - `supabase/migrations/` — database schema, row-level security, signup triggers, and syllabus data.
-- `backend/` — Spring Boot starter, not used by the current Vercel app.
+- `backend/` — Java 17 Spring Boot starter with a health endpoint. It is not connected to the deployed frontend yet; the deployed app currently uses Supabase directly.
+
+The Spring Boot service is retained for the Advanced Java mini-project path. Its sample student/equipment endpoints were removed because they returned hard-coded demo data and were not called by the app. A Java-based submission should implement and connect real REST endpoints before claiming Spring Boot powers the live workflows.
 
 ## Environment variables
 
